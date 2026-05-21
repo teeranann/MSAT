@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+message: "If you use MSAT in academic work, please cite it as below."
+title: "MSAT - Multi-Sensor Automatic Titrator (ESP32 open-hardware automatic titrator)"
+abstract: >-
+  A low-cost ESP32-based automatic acid-base titrator with gravimetric
+  titrant delivery that records pH, electrical conductivity, colour change
+  (dE), and temperature in real time, with a WiFi dashboard, an offline data
+  analyzer (equivalence-point and enthalpy determination), and a sync tool.
+type: software
+authors:
+  - family-names: Nongnual
+    given-names: Teeranan
+    email: teeranan.no@buu.ac.th
+    affiliation: "Department of Chemistry, Faculty of Science, Burapha University, Chonburi, Thailand"
+repository-code: "https://github.com/teeranann/msat"
+url: "https://github.com/teeranann/msat"
+license-url: "https://polyformproject.org/licenses/noncommercial/1.0.0"
+keywords:
+  - acid-base titration
+  - automatic titrator
+  - ESP32
+  - open hardware
+  - conductometric titration
+  - thermometric titration
+  - analytical chemistry education
+date-released: "2026-05-21"
+notes: >-
+  Copyright (c) 2026 Burapha University. Petty Patent pending, Application
+  No. 2603001145 (filed 2026-05-12). Software: PolyForm Noncommercial 1.0.0;
+  documentation/hardware/data: CC BY-NC 4.0. A related manuscript is in
+  preparation; please also cite the paper once published.

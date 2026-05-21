@@ -1,0 +1,11 @@
+pandas
+numpy
+matplotlib
+scipy
+ttkbootstrap
+scikit-image
+pillow
+requests
+websocket-client
+# optional: enables drag-and-drop file loading
+tkinterdnd2

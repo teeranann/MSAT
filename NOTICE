@@ -1,0 +1,34 @@
+MSAT - Multi-Sensor Automatic Titrator
+======================================
+
+Copyright (c) 2026 Burapha University. All rights reserved.
+
+Inventor / developer:
+  Teeranan Nongnual <teeranan.no@buu.ac.th>
+  Department of Chemistry, Faculty of Science,
+  Burapha University, Chonburi 20131, Thailand
+
+Intellectual property
+----------------------
+Petty Patent (อนุสิทธิบัตร) PENDING - Application No. 2603001145,
+filed 2026-05-12, owned by Burapha University.
+
+Licensing
+---------
+Software (firmware, analyzer, sync tool):
+  PolyForm Noncommercial License 1.0.0  (see LICENSE)
+Documentation, hardware design files, images, and sample data:
+  Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)
+  <https://creativecommons.org/licenses/by-nc/4.0/>
+
+You MAY: use, study, modify, and share this work for noncommercial purposes
+(education, research, schools, universities), provided you keep this notice
+and attribute the source.
+
+You MAY NOT: sell this system or its code, or use it for commercial purposes,
+without written permission. The associated patent rights are reserved.
+
+Commercial licensing / permissions: contact Burapha University via
+Teeranan Nongnual <teeranan.no@buu.ac.th>.
+
+When using this work in academic output, please cite it (see CITATION.cff).
