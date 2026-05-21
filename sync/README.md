@@ -1,15 +1,15 @@
 # MSAT Sync
 
 Download titration runs from the MSAT device to a PC over WiFi, with optional
-cleanup and folder protection. Windows front‑end (`runmsatsync.bat`) drives the
-worker (`msatsync.sh`, runs under **Git Bash**).
+cleanup and folder protection. Windows front‑end (`msat-sync.bat`) drives the
+worker (`msat-sync.sh`, runs under **Git Bash**).
 
 ## Requirements
 - Windows + [Git for Windows](https://git-scm.com/download/win) (provides Git Bash)
 - PC on the same WiFi as the device (default `192.168.1.200`)
 
 ## Use
-Double‑click **`runmsatsync.bat`** and pick from the menu:
+Double‑click **`msat-sync.bat`** and pick from the menu:
 ```
 [1] Sync files MSAT -> PC          (download new/updated runs)
 [2] Clean up space on MSAT         (delete files older than N days)
@@ -24,7 +24,7 @@ Double‑click **`runmsatsync.bat`** and pick from the menu:
   deleted/renamed (no admin needed — you own the folder).
 
 ## CLI flags (advanced)
-`msatsync.sh` accepts: `--mode=sync|cleanup|both`, `--cleanup-days=N`,
+`msat-sync.sh` accepts: `--mode=sync|cleanup|both`, `--cleanup-days=N`,
 `--no-manifest` (default), `--unsafe-delete-unbacked`.
 
 ## How it gets the file list

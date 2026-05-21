@@ -18,7 +18,7 @@ prohibited.
 SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
 Required Notice: Copyright (c) 2026 Burapha University.
 
-Run:   python msatdataanalyzer.py
+Run:   python msat-datanal.py
 Deps:  see requirements.txt  (pip install -r requirements.txt)
 """
 

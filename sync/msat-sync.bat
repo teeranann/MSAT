@@ -1,6 +1,6 @@
 @echo off
 REM ============================================================================
-REM  MSAT Sync launcher (Windows) - menu front-end for msatsync.sh (Git Bash).
+REM  MSAT Sync launcher (Windows) - menu front-end for msat-sync.sh (Git Bash).
 REM  Sync data from the MSAT device, clean up old files, or protect the output
 REM  folder. Copyright (c) 2026 Burapha University. All rights reserved.
 REM  Inventor/developer: Teeranan Nongnual <teeranan.no@buu.ac.th>, Burapha Univ.
@@ -35,7 +35,7 @@ call :find_bash
 if not defined BASH_EXE (
 	echo [X] Git Bash not found
 	echo     Checked PATH and common Git for Windows install folders.
-	echo     Install Git for Windows or edit PATH in runmsatsync.bat
+	echo     Install Git for Windows or edit PATH in msat-sync.bat
 	pause
 	exit /b 1
 )
@@ -144,7 +144,7 @@ echo.
 
 :: --no-manifest: device's cached _index.txt/sync_manifest goes stale and
 :: misses freshly recorded files. /listfiles?limit=all does a live SD scan.
-"%BASH_EXE%" "%SCRIPT_DIR%msatsync.sh" "%SH_DEST%" --no-manifest %MODE_ARG% %DAYS_ARG% %*
+"%BASH_EXE%" "%SCRIPT_DIR%msat-sync.sh" "%SH_DEST%" --no-manifest %MODE_ARG% %DAYS_ARG% %*
 
 pause
 exit /b 0

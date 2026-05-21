@@ -37,14 +37,14 @@ autotitrators, suitable for teaching and research labs.
 
 1. **Build the device** — see [`hardware/`](hardware/) for wiring (ESP32 + ADS1115 pH,
    RS‑485/Modbus EC meter, GY‑33 colour, DS18B20 temperature, HX711 load cell, relay pump).
-2. **Flash the firmware** — open [`firmware/MSAT-Autotitration/MSAT-Autotitration.ino`](firmware/),
+2. **Flash the firmware** — open [`firmware/msat-firmware/msat-firmware.ino`](firmware/),
    set your WiFi name/password (lines marked `EDIT ME`), install the required
    libraries, and upload. See [`firmware/README.md`](firmware/README.md).
 3. **Open the dashboard** — browse to the device IP (default `192.168.1.200`) to
    start/monitor a titration live.
-4. **Sync the data** — run [`sync/runmsatsync.bat`](sync/) to copy runs to your PC.
+4. **Sync the data** — run [`sync/msat-sync.bat`](sync/) to copy runs to your PC.
 5. **Analyze** — `pip install -r analyzer/requirements.txt` then
-   `python analyzer/msatdataanalyzer.py`. See [`analyzer/README.md`](analyzer/README.md).
+   `python analyzer/msat-datanal.py`. See [`analyzer/README.md`](analyzer/README.md).
 
 ## Key features
 

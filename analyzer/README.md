@@ -5,7 +5,7 @@ Desktop app (Python + Tkinter/ttkbootstrap + matplotlib) to analyze MSAT runs.
 ## Install & run
 ```bash
 pip install -r requirements.txt
-python msatdataanalyzer.py
+python msat-datanal.py
 ```
 Python 3.10+ recommended. `tkinterdnd2` is optional (drag‑and‑drop);
 `websocket-client` enables the Live Monitor.

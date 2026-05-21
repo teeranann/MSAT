@@ -36,7 +36,7 @@ run to the SD card.
 
 ## Configure before flashing
 Edit the lines marked `EDIT ME` near the top of
-`MSAT-Autotitration/MSAT-Autotitration.ino`:
+`msat-firmware/msat-firmware.ino`:
 ```cpp
 const char* ssid     = "YOUR_WIFI_SSID";       // 2.4 GHz network
 const char* password = "YOUR_WIFI_PASSWORD";

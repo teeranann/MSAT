@@ -1,8 +1,8 @@
 #!/bin/bash
 # ============================================================================
-# MSAT Sync  (msatsync.sh) - download titration data files from the MSAT
+# MSAT Sync  (msat-sync.sh) - download titration data files from the MSAT
 # device (ESP32) to a PC over WiFi, with an optional "clean up space" mode
-# that deletes old files on the device SD card. Invoked by runmsatsync.bat.
+# that deletes old files on the device SD card. Invoked by msat-sync.bat.
 #
 # Copyright (c) 2026 Burapha University. All rights reserved.
 # Inventor / developer: Teeranan Nongnual <teeranan.no@buu.ac.th>
