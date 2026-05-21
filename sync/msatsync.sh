@@ -30,8 +30,8 @@ DEFAULT_DEST="$SCRIPT_DIR/MSAT-Output"
 DEST_DIR="$DEFAULT_DEST"
 SCRIPT_VERSION="V.Y2026.88.20"
 
-SSID_NAME="physchem"
-MSAT_IP="192.168.1.200"
+SSID_NAME="YOUR_WIFI_SSID"   # <-- EDIT ME: the WiFi network the MSAT is on
+MSAT_IP="192.168.1.200"      # <-- device static IP (change if you changed it)
 BASE_URL="http://$MSAT_IP"
 MANIFEST_URL="$BASE_URL/sync_manifest"
 MANIFEST_REBUILD_URL="$BASE_URL/sync_manifest?rebuild=1"
