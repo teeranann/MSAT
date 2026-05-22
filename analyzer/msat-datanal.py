@@ -1,25 +1,14 @@
 """
-MSAT Data Analyzer  (V.Y2026.88.209)
-============================================================================
-Desktop analysis app for Multi-Sensor Automatic Titrator (MSAT) data files.
-Loads a run (.txt), derives pH/EC/colour-dE/temperature curves + derivatives,
-detects equivalence points (1st/2nd derivative + inflection trendlines),
-cleans glitches (hiccup despike), and can stream a live run from the device
-WebSocket. Three-tab config (Data / Analysis / Display) + results rail.
-
-Copyright (c) 2026 Burapha University. All rights reserved.
-Inventor / developer: Teeranan Nongnual <teeranan.no@buu.ac.th>
-  Department of Chemistry, Faculty of Science, Burapha University, Thailand
-Petty Patent pending: Application No. 2603001145 (filed 2026-05-12).
-
-License: PolyForm Noncommercial 1.0.0 (see /LICENSE) - free for noncommercial
-use (education/research/schools/universities), modification allowed, selling
-prohibited.
-SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
-Required Notice: Copyright (c) 2026 Burapha University.
+MSAT Data Analyzer V.Y2026.88.209 — UI Redesign (single-file build)
+================================================================
+Identical algorithms to the original (Algo, derived data, EP analysis, plotting)
+rebuilt with a three-tab config notebook (Data / Analysis / Display), a persistent
+results rail on the right, and a dashboard tab notebook (Dashboard / Cal / Raw)
+in the middle.
 
 Run:   python msat-datanal.py
-Deps:  see requirements.txt  (pip install -r requirements.txt)
+Deps:  pandas numpy matplotlib scipy ttkbootstrap scikit-image pillow requests
+       tkinterdnd2  (optional — enables drag-and-drop; pip install tkinterdnd2)
 """
 
 import sys
@@ -245,6 +234,7 @@ class MSAT_Redesign(ttk.Window):
         self.msat_status_var = tk.StringVar(value="MSAT: not checked")
 
         self.file_label_var = tk.StringVar(value="No file loaded")
+        self.config_label_var = tk.StringVar(value="No config loaded")
         self.table_view_mode = tk.StringVar(value="first1000")
         self.xaxis_var = tk.StringVar(value="mL")
         self.density_var = tk.DoubleVar(value=1.0)
@@ -503,6 +493,19 @@ class MSAT_Redesign(ttk.Window):
         self.btn_live.pack(side=LEFT)
         tk.Label(b, textvariable=self.msat_status_var, bg=self.C_CARD, fg="#475569",
                  font=("Consolas", 8), anchor="w").pack(fill=X, pady=(4, 0))
+
+        # Config card (auto-loaded sidecar status + manual load + reset)
+        b = self._card(p, "Config")
+        crow = tk.Frame(b, bg=self.C_CARD); crow.pack(fill=X)
+        ttk.Button(crow, text="💾  Save Config", bootstyle="success",
+                   command=self.save_config_only, width=16).pack(side=LEFT, padx=(0, 6))
+        ttk.Button(crow, text="📂  Load Config", bootstyle="warning",
+                   command=self.load_config_file, width=14).pack(side=LEFT)
+        crow2 = tk.Frame(b, bg=self.C_CARD); crow2.pack(fill=X, pady=(6, 0))
+        ttk.Button(crow2, text="↺  Clear Config", bootstyle="secondary",
+                   command=self.start_over, width=16).pack(side=LEFT)
+        tk.Label(b, textvariable=self.config_label_var, bg=self.C_CARD, fg="#64748b",
+                 font=("Consolas", 8), wraplength=320, justify="left", anchor="w").pack(fill=X, pady=(8, 0))
 
         # Axis & Scaling
         b = self._card(p, "Axis & Scaling")
@@ -783,7 +786,7 @@ class MSAT_Redesign(ttk.Window):
                    bootstyle="light").grid(row=1, column=0, padx=2, pady=2, sticky="ew")
         ttk.Button(exp, text="🖼 Image", command=self.copy_img_clipboard,
                    bootstyle="light").grid(row=1, column=1, padx=2, pady=2, sticky="ew")
-        ttk.Button(exp, text="💾 Save Image", command=self.save_image,
+        ttk.Button(exp, text="💾 Save IMG & Config", command=self.save_image,
                    bootstyle="secondary").grid(row=2, column=0, columnspan=2, padx=2, pady=(4, 2), sticky="ew")
 
     # ============================================================
@@ -997,6 +1000,10 @@ class MSAT_Redesign(ttk.Window):
         self.clear_all_data(); self.stop_monitoring()
         self.source_type = "OFFLINE"; self.source_path = path
         self.file_label_var.set(f"OFFLINE: {os.path.basename(path)}")
+        # Snapshot pristine defaults once (before any sidecar is applied) so
+        # "Start over" can restore the original settings later.
+        if not hasattr(self, "_default_config"):
+            self._default_config = self._collect_config()
         # Auto-restore the saved analysis view if a sidecar exists next to
         # this data file. Apply BEFORE parsing so the first derive uses the
         # saved smoothing/clean/axis settings.
@@ -1480,7 +1487,18 @@ class MSAT_Redesign(ttk.Window):
     def perform_ep_analysis(self):
         if self.df_cal is None: return
         self.found_eps = {}; self.global_anchors = []; self.trendlines_data = {}
-        df = self.df_cal; x = df['X_Axis'].values
+        df = self.df_cal
+        # Restrict EP / peak finding to the user's X Maximum: no point with
+        # X_Axis > Xmax may contribute to the analysis.
+        try:
+            xmax_lim = float(self.xmax_var.get())
+        except (ValueError, AttributeError):
+            xmax_lim = None
+        if xmax_lim is not None and xmax_lim > 0:
+            df = df[df['X_Axis'] <= xmax_lim]
+            if len(df) < 5:
+                df = self.df_cal  # too few points in range -> fall back to full
+        x = df['X_Axis'].values
         target_peaks = self.peak_sets["num_peak"].get()
         span_pct = self.peak_sets["int_span"].get()
         skip_pct = self.peak_sets["int_skip"].get()
@@ -1951,15 +1969,16 @@ class MSAT_Redesign(ttk.Window):
             messagebox.showwarning("Save Image", "No local input file loaded.\nPlease load a data file first.")
             return
 
-        # Prefix saved files with "-" so they sort separately from the raw
+        # Prefix saved files with "XO-" so they sort separately from the raw
         # data .txt files when the folder is listed alphabetically.
-        save_name = "-" + base_name
-        # 4 output paths
+        save_name = "XO-" + base_name
+        # output paths (4 images + 1 config sidecar)
         out_files = [
             ("PNG  (600 DPI)", save_name + ".png"),
             ("TIFF (600 DPI)", save_name + ".tif"),
             ("SVG  (vector)",  save_name + ".svg"),
             ("PDF  (vector)",  save_name + ".pdf"),
+            ("CONFIG (sidecar)", save_name + "-config.txt"),
         ]
         full_paths = [os.path.join(base_dir, fn) for _, fn in out_files]
         any_exists = any(os.path.exists(p) for p in full_paths)
@@ -2047,7 +2066,7 @@ class MSAT_Redesign(ttk.Window):
                                  "Some files could not be saved:\n" + "\n".join(errors))
         else:
             messagebox.showinfo("Save Image",
-                                f"4 files saved successfully!\n\nFolder:\n{base_dir}")
+                                f"5 files saved successfully!\n\nFolder:\n{base_dir}")
 
     def create_export_fig(self, output, to_buffer=False):
         win_w = self.tab_dash.winfo_width(); win_h = self.tab_dash.winfo_height()
@@ -2074,13 +2093,13 @@ class MSAT_Redesign(ttk.Window):
     # setting + manual delete list. When the same data file is loaded later,
     # the sidecar is auto-detected and applied so the previous analysis view
     # (smoothing, peak settings, axis ranges/intervals, manual deletes, ...)
-    # is restored exactly. The "-" prefix keeps it sorted next to the
+    # is restored exactly. The "XO-" prefix keeps it sorted next to the
     # exported images, away from raw data .txt files.
     # ============================================================
     def _config_sidecar_path(self, data_path):
         base_dir = os.path.dirname(os.path.abspath(data_path))
         base_name = os.path.splitext(os.path.basename(data_path))[0]
-        return os.path.join(base_dir, "-" + base_name + "-config.txt")
+        return os.path.join(base_dir, "XO-" + base_name + "-config.txt")
 
     def _collect_config(self):
         cfg = {}
@@ -2160,7 +2179,7 @@ class MSAT_Redesign(ttk.Window):
                 self.manual_excluded = set()
 
     def _save_config_sidecar(self, base_dir, base_name):
-        p = os.path.join(base_dir, "-" + base_name + "-config.txt")
+        p = os.path.join(base_dir, "XO-" + base_name + "-config.txt")
         with open(p, "w", encoding="utf-8") as f:
             json.dump(self._collect_config(), f, indent=2, ensure_ascii=False)
 
@@ -2168,6 +2187,7 @@ class MSAT_Redesign(ttk.Window):
         try:
             p = self._config_sidecar_path(data_path)
             if not os.path.isfile(p):
+                self.config_label_var.set("No config loaded")
                 return False
             with open(p, "r", encoding="utf-8") as f:
                 cfg = json.load(f)
@@ -2175,11 +2195,82 @@ class MSAT_Redesign(ttk.Window):
             # Tell calculate_derived_data_ui to also run the EP analysis
             # so trendlines/peaks appear exactly as they were when saved.
             self._auto_analyze_pending = True
+            self.config_label_var.set(f"✓ Config file loaded: {os.path.basename(p)}")
             print(f"[config] loaded sidecar: {os.path.basename(p)}")
             return True
         except Exception as exc:
+            self.config_label_var.set("No config loaded")
             print(f"[config] load failed: {exc}")
             return False
+
+    def save_config_only(self):
+        """Save just the config sidecar (XO-<name>-config.txt) next to the
+        loaded data file — no images. Useful when you only want the settings."""
+        if getattr(self, 'source_type', None) == "OFFLINE" and self.source_path:
+            base_dir  = os.path.dirname(os.path.abspath(self.source_path))
+            base_name = os.path.splitext(os.path.basename(self.source_path))[0]
+        else:
+            messagebox.showwarning("Save Config",
+                                   "No local input file loaded.\nPlease load a data file first.")
+            return
+        try:
+            self._save_config_sidecar(base_dir, base_name)
+        except Exception as exc:
+            messagebox.showerror("Save Config", f"Could not save config:\n{exc}")
+            return
+        fn = "XO-" + base_name + "-config.txt"
+        self.config_label_var.set(f"✓ Config file saved: {fn}")
+        messagebox.showinfo("Save Config",
+                            f"Config saved successfully!\n\n{fn}\n\nFolder:\n{base_dir}")
+
+    def load_config_file(self):
+        """Manually pick a config sidecar (XO-<name>-config.txt) and apply it
+        to the current view; re-derives if a data file is loaded."""
+        from tkinter import filedialog
+        init_dir = (os.path.dirname(os.path.abspath(self.source_path))
+                    if getattr(self, "source_path", "") else os.getcwd())
+        p = filedialog.askopenfilename(
+            title="Load config file",
+            initialdir=init_dir,
+            filetypes=[("MSAT config", "*-config.txt"),
+                       ("Text files", "*.txt"),
+                       ("All files", "*.*")])
+        if not p:
+            return
+        if not hasattr(self, "_default_config"):
+            self._default_config = self._collect_config()
+        try:
+            with open(p, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+            self._apply_config(cfg)
+            self.config_label_var.set(f"✓ Config file loaded: {os.path.basename(p)}")
+            print(f"[config] manually loaded: {os.path.basename(p)}")
+            # Re-run the analysis pipeline so the loaded settings take effect.
+            if getattr(self, "df_raw", None) is not None:
+                self._auto_analyze_pending = True
+                self.calculate_derived_data_ui()
+            else:
+                self.refresh_plots()
+        except Exception as exc:
+            messagebox.showerror("Load Config", f"Could not load config file:\n{exc}")
+
+    def start_over(self):
+        """Discard the loaded config and restore all settings to the pristine
+        defaults captured at startup. The current .txt file stays loaded and
+        is re-analyzed with default settings, as if no config file existed."""
+        self.manual_excluded = set()
+        if hasattr(self, "_default_config"):
+            self._apply_config(self._default_config)
+        self.config_label_var.set("No config loaded")
+        # Return to the "fresh load" state: no EP / Run Analysis results yet.
+        self.found_eps = {}; self.global_anchors = []; self.trendlines_data = {}
+        self.analysis_done = False
+        self._auto_analyze_pending = False
+        # Recompute derived curves only (analyze=False -> no EP detection).
+        if getattr(self, "df_raw", None) is not None:
+            self.calculate_derived_data(analyze=False)
+        else:
+            self.refresh_plots()
 
     def _toggle_maximize(self):
         if getattr(self, '_toggle_busy', False):
