@@ -3,9 +3,10 @@
 Wiring and component information for building the MSAT device.
 
 ## Files
-- `wiring/Autotitration-Components-Wiring-*.xlsx` — full component & wiring list
-- `wiring/autotitration.fzz` — Fritzing breadboard/schematic sketch
-- `wiring/Frizting modules/*.fzpz` — custom Fritzing parts (ADS1115, DS18B20,
+- `wiring/msat-wiring-components.xlsx` — full component & wiring list
+- `wiring/msat-wiring.fzz` — Fritzing breadboard/schematic sketch
+- `wiring/WIRING.md` — firmware‑exact connection table (build/verify spec)
+- `wiring/fritzing-parts/*.fzpz` — custom Fritzing parts (ADS1115, DS18B20,
   GY‑33, WAGO connectors)
 
 ## Main components
