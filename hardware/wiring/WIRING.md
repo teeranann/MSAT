@@ -102,13 +102,25 @@ MAX485, LM2596, 1× push button.
 
 ## Fritzing parts to download
 Already bundled in `fritzing-parts/`: ADS1115, DS18B20, GY-33, WAGO.
-Still needed (install via Fritzing ▸ Part ▸ Import, then save the sketch):
-- DS3231 RTC module
-- LCD 1602 I²C (with PCF8574 backpack)
-- microSD card module
-- 1-channel 5V relay module
-- RS-485 / Modbus EC transmitter (a labelled generic 2-terminal sensor is fine)
-- pH BNC probe
+Still needed — download the `.fzpz`, then in Fritzing use **Part ▸ Import…**,
+place + wire per the table above, and **File ▸ Save** (re-embeds everything):
+
+| Module | Source (`.fzpz`) |
+|---|---|
+| DS3231 RTC | [Soldered/e-radionica library](https://github.com/SolderedElectronics/e-radionica.com-Fritzing-Library-parts-/blob/master/DS3231%20RTC.fzpz) · [Adafruit](https://github.com/adafruit/Fritzing-Library/blob/master/parts/Adaruit%20DS3231.fzpz) · core part `rtc_ds3231_breakout` |
+| LCD 16×2 I²C | [johnyHV LCD1602-I2C](https://github.com/johnyHV/fritzing-parts/blob/master/LCD1602-I2C.fzpz) · [Soldered "LCD screen 16x2 IIC"](https://github.com/SolderedElectronics/e-radionica.com-Fritzing-Library-parts-/blob/master/LCD%20screen%2016x2%20IIC.fzpz) |
+| microSD module | [coderfls "Catalex MicroSD Module"](https://github.com/coderfls/Fritzing-Parts/blob/main/Catalex%20MicroSD%20Module.fzpz) · [robertoostenveld "SD Card Module"](https://github.com/robertoostenveld/fritzing/blob/master/SD%20Card%20Module.fzpz) |
+| 1-channel 5V relay | [coderfls "5V Relay Module"](https://github.com/coderfls/Fritzing-Parts/blob/main/5V%20Relay%20Module.fzpz) · [KY-019](https://github.com/coderfls/Fritzing-Parts/blob/main/KY-019%205V%20Relay%20Module.fzpz) |
+| MAX485 / RS-485 | [Warlib1975 "RS485 module MAX485"](https://github.com/Warlib1975/Fritzing-parts/blob/master/RS485%20module%20MAX485.fzpz) (SparkFun MAX485 also in Fritzing core) |
+| pH BNC probe | [DFRobot Fritzing library](https://github.com/DFRobot/Fritzing-library) (SEN0161 pH kit); or label a generic 2-terminal BNC into ADS1115 AIN0 |
+| EC meter | use a labelled generic 2-terminal sensor on the MAX485 A/B lines (no standard part) |
+
+> On GitHub, open the file and click **Download raw file** to get the `.fzpz`.
+
+## Quick reference figure
+`msat-wiring-schematic.svg` (this folder) is a vector wiring diagram of the
+full pin map above — open in any browser or Inkscape; export to PNG/PDF for
+publication.
 
 ---
 Hardware design © 2026 Burapha University · CC BY-NC 4.0 · Patent pending No. 2603001145

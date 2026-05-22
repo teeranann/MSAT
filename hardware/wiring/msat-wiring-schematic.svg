@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 1000" font-family="Arial, Helvetica, sans-serif">
+  <style>
+    .mod   { fill:#ffffff; stroke:#334155; stroke-width:2; }
+    .esp   { fill:#eef2ff; stroke:#1e3a8a; stroke-width:3; }
+    .pwr   { fill:#fef9c3; stroke:#a16207; stroke-width:2; }
+    .ext   { fill:#f1f5f9; stroke:#64748b; stroke-width:1.5; stroke-dasharray:5 4; }
+    .title { font-size:17px; font-weight:bold; fill:#0f172a; }
+    .name  { font-size:15px; font-weight:bold; fill:#0f172a; }
+    .sub   { font-size:12px; fill:#475569; }
+    .lbl   { font-size:12px; font-weight:bold; }
+    .hdr   { font-size:26px; font-weight:bold; fill:#0f172a; }
+    .foot  { font-size:12px; fill:#64748b; }
+    .w-i2c { stroke:#2563eb; stroke-width:2.5; fill:none; }
+    .w-485 { stroke:#ea580c; stroke-width:2.5; fill:none; }
+    .w-1w  { stroke:#16a34a; stroke-width:2.5; fill:none; }
+    .w-spi { stroke:#7c3aed; stroke-width:2.5; fill:none; }
+    .w-gpio{ stroke:#dc2626; stroke-width:2.5; fill:none; }
+    .w-pwr { stroke:#111827; stroke-width:2.5; fill:none; }
+    .dot   { fill:#0f172a; }
+  </style>
+
+  <!-- Header -->
+  <text x="750" y="44" text-anchor="middle" class="hdr">MSAT — Multi-Sensor Automatic Titrator · Wiring Schematic</text>
+  <text x="750" y="68" text-anchor="middle" class="sub">ESP32-WROOM-32 · pin map from msat-firmware.ino · I²C SDA=GPIO32 SCL=GPIO33</text>
+
+  <!-- ===================== ESP32 (center) ===================== -->
+  <rect x="620" y="330" width="260" height="430" rx="12" class="esp"/>
+  <text x="750" y="360" text-anchor="middle" class="title">ESP32-WROOM-32</text>
+  <text x="750" y="380" text-anchor="middle" class="sub">38-pin dev board</text>
+  <line x1="635" y1="392" x2="865" y2="392" stroke="#1e3a8a" stroke-width="1"/>
+
+  <!-- ===================== LEFT: I2C bus group ===================== -->
+  <!-- I2C rails -->
+  <line x1="520" y1="120" x2="520" y2="600" class="w-i2c"/>            <!-- SDA -->
+  <line x1="548" y1="120" x2="548" y2="600" class="w-i2c"/>            <!-- SCL -->
+  <text x="500" y="112" text-anchor="middle" class="lbl" fill="#2563eb">SDA</text>
+  <text x="565" y="112" text-anchor="middle" class="lbl" fill="#2563eb">SCL</text>
+
+  <!-- ESP32 -> I2C rails -->
+  <path class="w-i2c" d="M620 470 H520"/>
+  <path class="w-i2c" d="M620 500 H548"/>
+  <text x="612" y="463" text-anchor="end" class="lbl" fill="#2563eb">GPIO32 SDA</text>
+  <text x="612" y="516" text-anchor="end" class="lbl" fill="#2563eb">GPIO33 SCL</text>
+
+  <!-- I2C modules -->
+  <rect x="130" y="110" width="250" height="84" rx="8" class="mod"/>
+  <text x="145" y="138" class="name">ADS1115 — pH ADC</text>
+  <text x="145" y="158" class="sub">16-bit, I²C 0x48 · pH BNC → AIN0</text>
+  <text x="145" y="178" class="sub">+ 3V3 / GND</text>
+  <path class="w-i2c" d="M380 146 H520"/>
+  <path class="w-i2c" d="M380 168 H548"/>
+
+  <rect x="130" y="250" width="250" height="84" rx="8" class="mod"/>
+  <text x="145" y="278" class="name">GY-33 / TCS34725</text>
+  <text x="145" y="298" class="sub">colour sensor · I²C 0x29</text>
+  <text x="145" y="318" class="sub">+ 3V3 / GND</text>
+  <path class="w-i2c" d="M380 286 H520"/>
+  <path class="w-i2c" d="M380 308 H548"/>
+
+  <rect x="130" y="390" width="250" height="84" rx="8" class="mod"/>
+  <text x="145" y="418" class="name">DS3231 RTC</text>
+  <text x="145" y="438" class="sub">real-time clock · I²C 0x68</text>
+  <text x="145" y="458" class="sub">+ 3V3 / GND</text>
+  <path class="w-i2c" d="M380 426 H520"/>
+  <path class="w-i2c" d="M380 448 H548"/>
+
+  <rect x="130" y="530" width="250" height="84" rx="8" class="mod"/>
+  <text x="145" y="558" class="name">LCD 16×2 (I²C)</text>
+  <text x="145" y="578" class="sub">PCF8574 backpack · 0x27</text>
+  <text x="145" y="598" class="sub">+ 5V / GND</text>
+  <path class="w-i2c" d="M380 566 H520"/>
+  <path class="w-i2c" d="M380 588 H548"/>
+
+  <!-- ===================== RIGHT: per-GPIO modules ===================== -->
+  <!-- MAX485 + EC meter (RS-485) -->
+  <rect x="1090" y="100" width="290" height="92" rx="8" class="mod"/>
+  <text x="1105" y="128" class="name">MAX485 (RS-485)</text>
+  <text x="1105" y="148" class="sub">Serial2 9600 8N1 · Modbus id 1</text>
+  <text x="1105" y="168" class="sub">RO·DI·DE·RE  +  5V / GND</text>
+  <rect x="1210" y="206" width="170" height="46" rx="6" class="ext"/>
+  <text x="1295" y="234" text-anchor="middle" class="sub">EC meter (A/B)</text>
+  <path class="w-485" d="M1250 192 V206"/>
+  <path class="w-485" d="M880 400 H1010 V146 H1090"/>
+  <text x="1000" y="392" text-anchor="end" class="lbl" fill="#ea580c">GPIO2 DE/RE · 16 RX · 17 TX</text>
+
+  <!-- DS18B20 (1-Wire) -->
+  <rect x="1090" y="270" width="290" height="78" rx="8" class="mod"/>
+  <text x="1105" y="298" class="name">DS18B20 — temperature</text>
+  <text x="1105" y="318" class="sub">1-Wire · 4.7 kΩ pull-up to 3V3</text>
+  <text x="1105" y="336" class="sub">+ 3V3 / GND</text>
+  <path class="w-1w" d="M880 440 H1040 V309 H1090"/>
+  <text x="1030" y="432" text-anchor="end" class="lbl" fill="#16a34a">GPIO4</text>
+
+  <!-- HX711 + load cell -->
+  <rect x="1090" y="376" width="290" height="78" rx="8" class="mod"/>
+  <text x="1105" y="404" class="name">HX711 + load cell</text>
+  <text x="1105" y="424" class="sub">titrant mass · DT / SCK</text>
+  <text x="1105" y="442" class="sub">+ 5V / GND</text>
+  <path class="w-spi" d="M880 490 H1050 V415 H1090" stroke="#0891b2"/>
+  <text x="1040" y="482" text-anchor="end" class="lbl" fill="#0891b2">GPIO25 DT · 26 SCK</text>
+
+  <!-- microSD (SPI / VSPI) -->
+  <rect x="1090" y="482" width="290" height="92" rx="8" class="mod"/>
+  <text x="1105" y="510" class="name">microSD card module</text>
+  <text x="1105" y="530" class="sub">SPI (VSPI) · CS GPIO5</text>
+  <text x="1105" y="550" class="sub">SCK18 · MISO19 · MOSI23 + 5V/GND</text>
+  <path class="w-spi" d="M880 560 H1060 V528 H1090"/>
+  <text x="1050" y="552" text-anchor="end" class="lbl" fill="#7c3aed">VSPI</text>
+
+  <!-- Relay -> pump -->
+  <rect x="1090" y="602" width="290" height="78" rx="8" class="mod"/>
+  <text x="1105" y="630" class="name">Relay (1-ch, 5V) → pump</text>
+  <text x="1105" y="650" class="sub">titrant dosing · IN active-high</text>
+  <text x="1105" y="668" class="sub">+ 5V / GND · COM/NO → pump</text>
+  <path class="w-gpio" d="M880 620 H1040 V641 H1090"/>
+  <text x="1030" y="612" text-anchor="end" class="lbl" fill="#dc2626">GPIO13</text>
+
+  <!-- Buttons -->
+  <rect x="1090" y="708" width="290" height="78" rx="8" class="mod"/>
+  <text x="1105" y="736" class="name">Buttons 1 / 2 / 3</text>
+  <text x="1105" y="756" class="sub">to GND · internal pull-ups</text>
+  <text x="1105" y="774" class="sub">⚠ GPIO15 is a strapping pin</text>
+  <path class="w-gpio" d="M880 690 H1030 V747 H1090"/>
+  <text x="1020" y="682" text-anchor="end" class="lbl" fill="#dc2626">GPIO27 · 14 · 15</text>
+
+  <!-- ===================== Power ===================== -->
+  <rect x="300" y="700" width="250" height="84" rx="8" class="pwr"/>
+  <text x="315" y="728" class="name">LM2596 buck</text>
+  <text x="315" y="748" class="sub">supply → 5V rail</text>
+  <text x="315" y="768" class="sub">ESP32 LDO → 3V3 for sensors</text>
+  <path class="w-pwr" d="M550 742 H620"/>
+  <text x="585" y="734" text-anchor="middle" class="lbl" fill="#111827">5V/VIN</text>
+
+  <!-- ===================== Legend ===================== -->
+  <rect x="300" y="828" width="900" height="86" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="320" y="852" class="title">Legend</text>
+  <line x1="320" y1="872" x2="360" y2="872" class="w-i2c"/>      <text x="368" y="877" class="sub">I²C bus (32/33)</text>
+  <line x1="520" y1="872" x2="560" y2="872" class="w-485"/>      <text x="568" y="877" class="sub">RS-485 / UART</text>
+  <line x1="720" y1="872" x2="760" y2="872" class="w-1w"/>       <text x="768" y="877" class="sub">1-Wire</text>
+  <line x1="880" y1="872" x2="920" y2="872" class="w-spi"/>      <text x="928" y="877" class="sub">SPI / HX711</text>
+  <line x1="1060" y1="872" x2="1100" y2="872" class="w-gpio"/>   <text x="1108" y="877" class="sub">GPIO digital</text>
+  <line x1="320" y1="898" x2="360" y2="898" class="w-pwr"/>      <text x="368" y="903" class="sub">Power (5V / 3V3 / GND shared by all modules)</text>
+  <text x="720" y="903" class="sub">⚠ GPIO2 &amp; GPIO15 are strapping pins — disconnect while flashing.</text>
+
+  <!-- Footer -->
+  <text x="750" y="956" text-anchor="middle" class="foot">Hardware design © 2026 Burapha University · CC BY-NC 4.0 · Patent pending No. 2603001145 · github.com/teeranann/msat</text>
+</svg>
