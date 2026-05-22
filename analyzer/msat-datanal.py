@@ -497,13 +497,10 @@ class MSAT_Redesign(ttk.Window):
         # Config card (auto-loaded sidecar status + manual load + reset)
         b = self._card(p, "Config")
         crow = tk.Frame(b, bg=self.C_CARD); crow.pack(fill=X)
-        ttk.Button(crow, text="💾  Save Config", bootstyle="success",
-                   command=self.save_config_only, width=16).pack(side=LEFT, padx=(0, 6))
         ttk.Button(crow, text="📂  Load Config", bootstyle="warning",
-                   command=self.load_config_file, width=14).pack(side=LEFT)
-        crow2 = tk.Frame(b, bg=self.C_CARD); crow2.pack(fill=X, pady=(6, 0))
-        ttk.Button(crow2, text="↺  Clear Config", bootstyle="secondary",
-                   command=self.start_over, width=16).pack(side=LEFT)
+                   command=self.load_config_file, width=16).pack(side=LEFT, padx=(0, 6))
+        ttk.Button(crow, text="↺  Clear Config", bootstyle="secondary",
+                   command=self.start_over, width=14).pack(side=LEFT)
         tk.Label(b, textvariable=self.config_label_var, bg=self.C_CARD, fg="#64748b",
                  font=("Consolas", 8), wraplength=320, justify="left", anchor="w").pack(fill=X, pady=(8, 0))
 
@@ -788,6 +785,8 @@ class MSAT_Redesign(ttk.Window):
                    bootstyle="light").grid(row=1, column=1, padx=2, pady=2, sticky="ew")
         ttk.Button(exp, text="💾 Save IMG & Config", command=self.save_image,
                    bootstyle="secondary").grid(row=2, column=0, columnspan=2, padx=2, pady=(4, 2), sticky="ew")
+        ttk.Button(exp, text="💾 Save Config only", command=self.save_config_only,
+                   bootstyle="success").grid(row=3, column=0, columnspan=2, padx=2, pady=(0, 2), sticky="ew")
 
     # ============================================================
     # SHARED HELPERS (unchanged behaviour)
