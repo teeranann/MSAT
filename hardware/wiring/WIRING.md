@@ -118,9 +118,24 @@ place + wire per the table above, and **File ▸ Save** (re-embeds everything):
 > On GitHub, open the file and click **Download raw file** to get the `.fzpz`.
 
 ## Quick reference figure
-`msat-wiring-schematic.svg` (this folder) is a vector wiring diagram of the
-full pin map above — open in any browser or Inkscape; export to PNG/PDF for
-publication.
+`msat-wiring-schematic.svg` is a high-level block diagram of the full pin map
+above — good as a paper overview figure.
+
+## Detailed harness diagram (WireViz)
+`msat-wiring.yml` is the WireViz source of truth: every connector with every
+pin, every cable with explicit pin-to-pin connections, colour-coded by bus.
+Rendered outputs in this folder:
+
+- `msat-wiring.html` — interactive viewer with embedded BOM (open in browser)
+- `msat-wiring.svg` / `msat-wiring.png` — harness diagram for the manuscript
+- `msat-wiring.bom.tsv` — bill of materials
+
+Re-render after editing the YAML:
+```
+pip install wireviz                            # one-time
+winget install Graphviz.Graphviz               # one-time (system, needs `dot`)
+wireviz msat-wiring.yml                         # produces .html/.svg/.png/.bom.tsv
+```
 
 ---
 Hardware design © 2026 Burapha University · CC BY-NC 4.0 · Patent pending No. 2603001145

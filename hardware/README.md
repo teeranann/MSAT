@@ -3,12 +3,21 @@
 Wiring and component information for building the MSAT device.
 
 ## Files
-- `wiring/msat-wiring-components.xlsx` — full component & wiring list
-- `wiring/msat-wiring.fzz` — Fritzing breadboard/schematic sketch
 - `wiring/WIRING.md` — firmware‑exact connection table + part download links
-- `wiring/msat-wiring-schematic.svg` — vector wiring diagram (publication figure)
-- `wiring/fritzing-parts/*.fzpz` — custom Fritzing parts (ADS1115, DS18B20,
-  GY‑33, WAGO connectors)
+- `wiring/msat-wiring.yml` — **WireViz source of truth** (pin-by-pin harness spec)
+- `wiring/msat-wiring.html` — interactive harness diagram + BOM (open in browser)
+- `wiring/msat-wiring.svg` / `.png` — rendered harness diagram (paper-grade)
+- `wiring/msat-wiring.bom.tsv` — bill of materials (drops into Excel)
+- `wiring/msat-wiring-schematic.svg` — high-level block diagram (overview figure)
+- `wiring/msat-wiring-components.xlsx` — full component & wiring list
+- `wiring/msat-wiring.fzz` — Fritzing breadboard/schematic sketch (work-in-progress)
+- `wiring/fritzing-parts/*.fzpz` — custom Fritzing parts
+
+To re-render the harness after editing the YAML:
+```
+pip install wireviz   # plus a system install of Graphviz (graphviz.org / winget install Graphviz.Graphviz)
+wireviz wiring/msat-wiring.yml
+```
 
 ## Main components
 | Subsystem | Part | Interface |
