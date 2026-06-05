@@ -74,3 +74,17 @@ For commercial licensing, contact Teeranan Nongnual <teeranan.no@buu.ac.th>.
 
 If you use MSAT in academic work, please cite it — see [`CITATION.cff`](CITATION.cff)
 (a related manuscript is in preparation; cite the paper too once published).
+
+## Author
+
+**Teeranan Nongnual**<br>
+Department of Chemistry, Faculty of Science, Burapha University, Thailand
+
+## Funding
+
+Burapha University (BUU) and Thailand Science Research and Innovation (TSRI).
+
+## Acknowledgements
+
+This software was developed with support from a research grant by Burapha
+University and Thailand Science Research and Innovation (TSRI).
