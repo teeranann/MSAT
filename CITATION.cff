@@ -12,6 +12,30 @@ authors:
     given-names: Teeranan
     email: teeranan.no@buu.ac.th
     affiliation: "Department of Chemistry, Faculty of Science, Burapha University, Chonburi, Thailand"
+  - family-names: Yasarawan
+    given-names: Nuttawisit
+    email: nuttawisit@buu.ac.th
+    affiliation: "Department of Chemistry, Faculty of Science, Burapha University, Chonburi, Thailand"
+  - family-names: Jittaviriyapong
+    given-names: Pichamon
+    email: 68910116@my.buu.ac.th
+    affiliation: "Department of Chemistry, Faculty of Science, Burapha University, Chonburi, Thailand"
+  - family-names: Saelee
+    given-names: Kanoksak
+    email: saeleekanoksak1998@gmail.com
+    affiliation: "Department of Chemistry, Faculty of Science, Burapha University, Chonburi, Thailand"
+  - family-names: Suwattanamala
+    given-names: Akapong
+    email: akapong@buu.ac.th
+    affiliation: "Department of Chemistry, Faculty of Science, Burapha University, Chonburi, Thailand"
+  - family-names: Kaewpirom
+    given-names: Supranee
+    email: kaewpiro@buu.ac.th
+    affiliation: "Department of Chemistry, Faculty of Science, Burapha University, Chonburi, Thailand"
+  - family-names: Benjalersyarnon
+    given-names: Takat
+    email: takat.ben@rmutr.ac.th
+    affiliation: "Department of Mechanical Engineering, Faculty of Engineering, Rajamangala University of Technology Rattanakosin, Nakhon Pathom, Thailand"
 repository-code: "https://github.com/teeranann/msat"
 url: "https://github.com/teeranann/msat"
 license-url: "https://polyformproject.org/licenses/noncommercial/1.0.0"

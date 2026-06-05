@@ -9,6 +9,7 @@ trendlines) and estimates titration enthalpy, and a **sync tool** copies runs
 from the device to a PC.
 
 > Copyright © 2026 **Burapha University**. Inventor/developer: **Teeranan Nongnual**.
+> Co-inventors: **Nuttawisit Yasarawan, Pichamon Jittaviriyapong, Kanoksak Saelee, Akapong Suwattanamala, Supranee Kaewpirom, Takat Benjalersyarnon**.
 > **Petty Patent pending — Application No. 2603001145** (filed 2026‑05‑12).
 > Noncommercial use only — see [License](#license).
 

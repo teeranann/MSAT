@@ -234,6 +234,7 @@ class MSAT_Redesign(ttk.Window):
         self.msat_status_var = tk.StringVar(value="MSAT: not checked")
 
         self.file_label_var = tk.StringVar(value="No file loaded")
+        self.file_path_var  = tk.StringVar(value="No file loaded")
         self.config_label_var = tk.StringVar(value="No config loaded")
         self.table_view_mode = tk.StringVar(value="first1000")
         self.xaxis_var = tk.StringVar(value="mL")
@@ -261,16 +262,60 @@ class MSAT_Redesign(ttk.Window):
             "int_span": tk.DoubleVar(value=15.0),
             "int_skip": tk.DoubleVar(value=2.0),
             "int_poly": tk.IntVar(value=1),
-            "slope_diff": tk.DoubleVar(value=0.005)
+            "slope_diff": tk.DoubleVar(value=0.005),
+            # Per-group inflection overrides (used when inflection_mode =
+            # "separate"). pH/Color always use the primary int_span/int_skip
+            # /int_poly/slope_diff above — no separate "_ph" set needed.
+            "int_span_ec":   tk.DoubleVar(value=15.0),
+            "int_skip_ec":   tk.DoubleVar(value=2.0),
+            "int_poly_ec":   tk.IntVar(value=1),
+            "slope_diff_ec": tk.DoubleVar(value=0.005),
+            "int_span_temp":   tk.DoubleVar(value=15.0),
+            "int_skip_temp":   tk.DoubleVar(value=2.0),
+            "int_poly_temp":   tk.IntVar(value=1),
+            "slope_diff_temp": tk.DoubleVar(value=0.005),
         }
+        # Inflection mode: "all" = primary set used for every sensor (default),
+        # "separate" = primary set used for pH+Color; EC and Temp get their
+        # own overrides.
+        self.inflection_mode = tk.StringVar(value="all")
         self.show_trendlines = tk.BooleanVar(value=False)
+        # Merge Lines: when a sensor channel has multiple inflection EPs,
+        # collapse the right-of-EP[i] and left-of-EP[i+1] trendlines into
+        # a single shared line spanning EP[i] → EP[i+1]. The first (before
+        # first EP) and last (after last EP) lines stay independent.
+        self.merge_lines = tk.BooleanVar(value=False)
         self.temp_last_only = tk.BooleanVar(value=True)
         self.show_dt_in_graph = tk.BooleanVar(value=True)
         self.dt_mode = tk.StringVar(value="ep_min")
 
-        self.phi_var = tk.DoubleVar(value=4.01)
-        self.phf_var = tk.DoubleVar(value=9.18)
-        self.ph_autoscale_active = False
+        # pH calibration: Auto (regress logged pH vs Volt) or Manual override,
+        # with Single-line or Piecewise (firmware-style, 2 segments split at
+        # pH 6.86) fit modes.
+        self.ph_cal_mode = tk.StringVar(value="auto")      # auto / manual
+        self.ph_fit_type = tk.StringVar(value="single")    # single / piecewise
+        # Single-line entry vars
+        self.ph_slope_var     = tk.StringVar(value="—")
+        self.ph_intercept_var = tk.StringVar(value="—")
+        # Piecewise entry vars
+        self.ph_pw_slope1_var     = tk.StringVar(value="—")
+        self.ph_pw_intercept1_var = tk.StringVar(value="—")
+        self.ph_pw_slope2_var     = tk.StringVar(value="—")
+        self.ph_pw_intercept2_var = tk.StringVar(value="—")
+        self.ph_pw_break_var      = tk.StringVar(value="—")
+        # Stats label
+        self.ph_cal_stats_var = tk.StringVar(value="(load a data file)")
+        # Auto-computed fits
+        self._ph_auto_single = {"slope": None, "intercept": None,
+                                "r2": None, "rmse": None, "n": 0}
+        self._ph_auto_pw = {"m1": None, "b1": None, "r2_1": None, "n_1": 0,
+                            "m2": None, "b2": None, "r2_2": None, "n_2": 0,
+                            "break_V": None}
+        # Manual override state
+        self._ph_manual_single_applied = False
+        self._ph_manual_single = (None, None)            # (slope, intercept)
+        self._ph_manual_pw_applied = False
+        self._ph_manual_pw = (None, None, None, None, None)  # m1, b1, m2, b2, break_V
 
         self.vis = {"pt_size": tk.DoubleVar(value=0.2), "font": tk.DoubleVar(value=12)}
         self.yaxis = {
@@ -352,6 +397,41 @@ class MSAT_Redesign(ttk.Window):
                     font=("Helvetica", 9, "bold"))
         s.configure("Hint.TLabel", background=self.C_CARD, foreground="#94a3b8",
                     font=("Helvetica", 8, "italic"))
+        s.configure("PeakCount.TSpinbox",
+                arrowsize=12,
+                fieldbackground="#b45309",
+                background="#b45309",
+                foreground="#000000",
+                arrowcolor="#ffffff",
+                bordercolor="#92400e",
+                darkcolor="#92400e",
+                lightcolor="#92400e",
+                insertcolor="#ffffff",
+                padding=1)
+        s.map("PeakCount.TSpinbox",
+              fieldbackground=[("readonly", "#f5a903"), ("disabled", "#f5a903"), ("!disabled", "#f5a903")],
+              foreground=[("readonly", "#000000"), ("disabled", "#000000"), ("!disabled", "#000000")],
+              background=[("readonly", "#f5a903"), ("disabled", "#f5a903"), ("!disabled", "#f5a903")],
+              arrowcolor=[("active", "#ffffff"), ("!disabled", "#ffffff")],
+              bordercolor=[("focus", "#8a5f03"), ("!focus", "#8a5f03")],
+              lightcolor=[("focus", "#8a5f03"), ("!focus", "#8a5f03")],
+              darkcolor=[("focus", "#8a5f03"), ("!focus", "#8a5f03")])
+        s.configure("SummaryGreen.TButton",
+                background="#16a34a",
+                foreground="#ffffff",
+                bordercolor="#16a34a",
+                darkcolor="#15803d",
+                lightcolor="#16a34a",
+                focusthickness=0,
+                focuscolor="#16a34a",
+                padding=(8, 4),
+                font=("Helvetica", 9))
+        s.map("SummaryGreen.TButton",
+              background=[("pressed", "#166534"), ("active", "#15803d"), ("!disabled", "#16a34a")],
+              foreground=[("pressed", "#ffffff"), ("active", "#ffffff"), ("!disabled", "#ffffff")],
+              bordercolor=[("pressed", "#166534"), ("active", "#15803d"), ("!disabled", "#16a34a")],
+              darkcolor=[("pressed", "#166534"), ("active", "#15803d"), ("!disabled", "#15803d")],
+              lightcolor=[("pressed", "#166534"), ("active", "#16a34a"), ("!disabled", "#16a34a")])
 
     # ============================================================
     # LAYOUT
@@ -388,11 +468,13 @@ class MSAT_Redesign(ttk.Window):
         self.led_canvas = tk.Canvas(src_holder, width=12, height=12, highlightthickness=0, bg="#1e40af")
         self.led_id = self.led_canvas.create_oval(1, 1, 11, 11, fill="gray", outline="")
         self.led_canvas.pack(side=LEFT, padx=(8, 6), pady=4)
-        ttk.Label(src_holder, textvariable=self.file_label_var, style="Source.TLabel").pack(side=LEFT)
+        ttk.Label(src_holder, textvariable=self.file_path_var, style="Source.TLabel").pack(side=LEFT)
 
-        # Right side
+        # Right side  (visual order: [Full/Restore] [Clear All] [Close])
         ttk.Button(bar, text="✕  Close", bootstyle="danger",
                    command=self.on_close).pack(side=RIGHT, padx=(0, 14), pady=8)
+        ttk.Button(bar, text="🧹  Clear All", bootstyle="warning",
+                   command=self.clear_all_state).pack(side=RIGHT, padx=(0, 4), pady=8)
         self._btn_maximize = ttk.Button(bar, text="⛶  Full / Restore", bootstyle="secondary-outline",
                                         command=self._toggle_maximize)
         self._btn_maximize.pack(side=RIGHT, padx=(0, 4), pady=8)
@@ -452,19 +534,19 @@ class MSAT_Redesign(ttk.Window):
 
     def _card(self, parent, title, subtitle=None):
         outer = tk.Frame(parent, bg=self.C_PANEL)
-        outer.pack(fill=X, padx=10, pady=6)
+        outer.pack(fill=X, padx=8, pady=6)
         card = tk.Frame(outer, bg=self.C_CARD,
-                        highlightbackground="#e2e8f0", highlightthickness=1)
+                        highlightbackground="#e2e8f0", highlightthickness=2)
         card.pack(fill=X)
         head = tk.Frame(card, bg="#f8fafc")
         head.pack(fill=X)
         tk.Label(head, text=title.upper(), bg="#f8fafc", fg=self.C_TEXT,
-                 font=("Helvetica", 9, "bold")).pack(side=LEFT, padx=10, pady=6)
+                 font=("Helvetica", 9, "bold")).pack(side=LEFT, padx=8, pady=3)
         if subtitle:
             tk.Label(head, text=subtitle, bg="#f8fafc", fg="#94a3b8",
-                     font=("Helvetica", 8, "italic")).pack(side=RIGHT, padx=10, pady=6)
+                     font=("Helvetica", 8, "italic")).pack(side=RIGHT, padx=8, pady=3)
         body = tk.Frame(card, bg=self.C_CARD)
-        body.pack(fill=X, padx=10, pady=10)
+        body.pack(fill=X, padx=8, pady=6)
         return body
 
     def _label(self, parent, text, bold=False):
@@ -481,10 +563,10 @@ class MSAT_Redesign(ttk.Window):
                    command=self.load_local_file, width=16)
         self.btn_local_file.pack(side=LEFT, padx=(0, 6))
         tk.Label(b, textvariable=self.file_label_var, bg=self.C_CARD, fg="#64748b",
-                 font=("Consolas", 8), wraplength=320, justify="left", anchor="w").pack(fill=X, pady=(8, 0))
+                 font=("Consolas", 8), wraplength=320, justify="left", anchor="w").pack(fill=X, pady=(4, 0))
 
         # Live Monitor: check device status, then stream /data while running
-        live = tk.Frame(b, bg=self.C_CARD); live.pack(fill=X, pady=(8, 0))
+        live = tk.Frame(b, bg=self.C_CARD); live.pack(fill=X, pady=(4, 0))
         self.btn_check = ttk.Button(live, text="📡  Check MSAT", bootstyle="info",
                    command=self.check_msat_status, width=14)
         self.btn_check.pack(side=LEFT, padx=(0, 6))
@@ -492,17 +574,17 @@ class MSAT_Redesign(ttk.Window):
                                    command=self.toggle_live_monitor, width=15, state="disabled")
         self.btn_live.pack(side=LEFT)
         tk.Label(b, textvariable=self.msat_status_var, bg=self.C_CARD, fg="#475569",
-                 font=("Consolas", 8), anchor="w").pack(fill=X, pady=(4, 0))
+                 font=("Consolas", 8), anchor="w").pack(fill=X, pady=(2, 0))
 
         # Config card (auto-loaded sidecar status + manual load + reset)
         b = self._card(p, "Config")
         crow = tk.Frame(b, bg=self.C_CARD); crow.pack(fill=X)
         ttk.Button(crow, text="📂  Load Config", bootstyle="warning",
                    command=self.load_config_file, width=16).pack(side=LEFT, padx=(0, 6))
-        ttk.Button(crow, text="↺  Clear Config", bootstyle="secondary",
+        ttk.Button(crow, text="↺  Clear Config", bootstyle="danger",
                    command=self.start_over, width=14).pack(side=LEFT)
         tk.Label(b, textvariable=self.config_label_var, bg=self.C_CARD, fg="#64748b",
-                 font=("Consolas", 8), wraplength=320, justify="left", anchor="w").pack(fill=X, pady=(8, 0))
+                 font=("Consolas", 8), wraplength=320, justify="left", anchor="w").pack(fill=X, pady=(4, 0))
 
         # Axis & Scaling
         b = self._card(p, "Axis & Scaling")
@@ -512,7 +594,7 @@ class MSAT_Redesign(ttk.Window):
             ttk.Radiobutton(row, text=t, variable=self.xaxis_var, value=v,
                             command=self.update_axis_inputs).pack(side=LEFT, padx=2)
 
-        grid = tk.Frame(b, bg=self.C_CARD); grid.pack(fill=X, pady=(8, 0))
+        grid = tk.Frame(b, bg=self.C_CARD); grid.pack(fill=X, pady=(4, 0))
         self._label(grid, "Density (g/cm³)").grid(row=0, column=0, sticky="w", padx=(0, 8), pady=3)
         self.ent_density = ttk.Entry(grid, textvariable=self.density_var, width=10)
         self.ent_density.grid(row=0, column=1, sticky="w", pady=3)
@@ -522,7 +604,7 @@ class MSAT_Redesign(ttk.Window):
         ttk.Button(grid, text="Apply", bootstyle="primary", width=8,
                    command=self.apply_axis_settings).grid(row=0, column=2, rowspan=2, padx=12)
 
-        de_row = tk.Frame(b, bg=self.C_CARD); de_row.pack(fill=X, pady=(8, 0))
+        de_row = tk.Frame(b, bg=self.C_CARD); de_row.pack(fill=X, pady=(4, 0))
         self._label(de_row, "Y-Axis", bold=True).pack(side=LEFT, padx=(0, 8))
         self._label(de_row, "ΔE Mode").pack(side=LEFT, padx=(0, 8))
         ttk.Combobox(de_row, textvariable=self.de_mode, values=["CIELAB", "RGB Eucl."],
@@ -538,14 +620,14 @@ class MSAT_Redesign(ttk.Window):
         ttk.Spinbox(rowc, from_=2.0, to=10.0, increment=0.5, width=5,
                     textvariable=self.hiccup_nsig,
                     command=self._recompute_cleaning).pack(side=LEFT)
-        rowb = tk.Frame(b, bg=self.C_CARD); rowb.pack(fill=X, pady=(6, 0))
+        rowb = tk.Frame(b, bg=self.C_CARD); rowb.pack(fill=X, pady=(4, 0))
         ttk.Button(rowb, text="🧹 Clean hiccup now", bootstyle="primary", width=18,
                    command=self._recompute_cleaning).pack(side=LEFT, padx=(0, 6))
-        ttk.Button(rowb, text="↺ Reset deletes", bootstyle="secondary", width=14,
+        ttk.Button(rowb, text="↺ Reset deletes", bootstyle="danger", width=14,
                    command=self._reset_manual_deletes).pack(side=LEFT)
         tk.Label(b, text="Tip: click a point on any chart to delete that sample.",
                  bg=self.C_CARD, fg="#94a3b8",
-                 font=("Helvetica", 8, "italic")).pack(anchor="w", pady=(6, 2))
+                 font=("Helvetica", 8, "italic")).pack(anchor="w", pady=(3, 1))
         self._spin_grid(b, [
             ("Smooth pH", self.algo["sm_ph"], 1, 0, 999),
             ("Smooth Color", self.algo["sm_col"], 1, 0, 999),
@@ -553,37 +635,114 @@ class MSAT_Redesign(ttk.Window):
             ("Smooth Temp", self.algo["sm_temp"], 1, 0, 999),
             ("Smooth Deriv.", self.algo["sm_deriv"], 1, 0, 999),
         ], cols=2)
-        rowap = tk.Frame(b, bg=self.C_CARD); rowap.pack(fill=X, pady=(8, 0))
+        rowap = tk.Frame(b, bg=self.C_CARD); rowap.pack(fill=X, pady=(4, 0))
         ttk.Button(rowap, text="✓ Apply smoothing", bootstyle="primary", width=18,
                    command=self._recompute_cleaning).pack(side=LEFT)
         tk.Label(rowap, text="(re-applies smooth + clean)", bg=self.C_CARD,
                  fg="#94a3b8", font=("Helvetica", 8, "italic")).pack(side=LEFT, padx=(8, 0))
 
-        # pH calibration
-        b = self._card(p, "pH Calibration")
-        row = tk.Frame(b, bg=self.C_CARD); row.pack(fill=X)
-        self._label(row, "Initial pH").pack(side=LEFT, padx=(0, 4))
-        ttk.Entry(row, textvariable=self.phi_var, width=6).pack(side=LEFT, padx=(0, 12))
-        self._label(row, "Final pH").pack(side=LEFT, padx=(0, 4))
-        ttk.Entry(row, textvariable=self.phf_var, width=6).pack(side=LEFT, padx=(0, 12))
-        self.btn_scale = ttk.Button(row, text="Apply", bootstyle="primary",
-                                    width=8, command=self.apply_ph_scale)
-        self.btn_scale.pack(side=LEFT)
-        tk.Label(b, text="Maps voltage → pH using two-point linear fit.",
-                 bg=self.C_CARD, fg="#94a3b8",
-                 font=("Helvetica", 8, "italic")).pack(anchor="w", pady=(6, 0))
+        # pH Calibration (Volt → pH) — Auto/Manual × Single/Piecewise
+        b = self._card(p, "pH Calibration", subtitle="Volt → pH (single or piecewise)")
+        modes = tk.Frame(b, bg=self.C_CARD); modes.pack(fill=X)
+        ttk.Radiobutton(modes, text="Auto", value="auto",
+                        variable=self.ph_cal_mode,
+                        command=self._on_ph_mode_change).pack(side=LEFT, padx=(0, 10))
+        ttk.Radiobutton(modes, text="Manual override", value="manual",
+                        variable=self.ph_cal_mode,
+                        command=self._on_ph_mode_change).pack(side=LEFT)
+        fits = tk.Frame(b, bg=self.C_CARD); fits.pack(fill=X, pady=(2, 0))
+        ttk.Radiobutton(fits, text="Single line", value="single",
+                        variable=self.ph_fit_type,
+                        command=self._on_ph_fit_type_change).pack(side=LEFT, padx=(0, 10))
+        ttk.Radiobutton(fits, text="Piecewise (2 segments)", value="piecewise",
+                        variable=self.ph_fit_type,
+                        command=self._on_ph_fit_type_change).pack(side=LEFT)
+
+        # ── Single-line sub-frame ──────────────────────────────────────
+        self._ph_single_frame = tk.Frame(b, bg=self.C_CARD)
+        self._ph_single_frame.pack(fill=X, pady=(4, 0))
+        srow = tk.Frame(self._ph_single_frame, bg=self.C_CARD); srow.pack(fill=X)
+        self._label(srow, "Slope").pack(side=LEFT, padx=(0, 4))
+        self.ent_ph_slope = ttk.Entry(srow, textvariable=self.ph_slope_var, width=9)
+        self.ent_ph_slope.pack(side=LEFT)
+        tk.Label(srow, text="pH/V", bg=self.C_CARD, fg="#64748b",
+                 font=("Helvetica", 8)).pack(side=LEFT, padx=(2, 10))
+        self._label(srow, "Intercept").pack(side=LEFT, padx=(0, 4))
+        self.ent_ph_inter = ttk.Entry(srow, textvariable=self.ph_intercept_var, width=9)
+        self.ent_ph_inter.pack(side=LEFT)
+        tk.Label(srow, text="pH", bg=self.C_CARD, fg="#64748b",
+                 font=("Helvetica", 8)).pack(side=LEFT, padx=(2, 0))
+
+        # ── Piecewise sub-frame (initially hidden) ─────────────────────
+        self._ph_pw_frame = tk.Frame(b, bg=self.C_CARD)
+        # Break V row
+        brow = tk.Frame(self._ph_pw_frame, bg=self.C_CARD); brow.pack(fill=X)
+        self._label(brow, "Break V").pack(side=LEFT, padx=(0, 4))
+        self.ent_ph_break = ttk.Entry(brow, textvariable=self.ph_pw_break_var, width=9)
+        self.ent_ph_break.pack(side=LEFT)
+        tk.Label(brow, text="V (≈ pH 6.86)", bg=self.C_CARD, fg="#64748b",
+                 font=("Helvetica", 8)).pack(side=LEFT, padx=(4, 0))
+        # Segment 1 (acidic)
+        s1 = tk.Frame(self._ph_pw_frame, bg=self.C_CARD); s1.pack(fill=X, pady=(2, 0))
+        tk.Label(s1, text="Seg1 acidic (V≥brk):", bg=self.C_CARD, fg="#475569",
+                 font=("Helvetica", 8, "bold")).pack(side=LEFT, padx=(0, 4))
+        self.ent_ph_pw_m1 = ttk.Entry(s1, textvariable=self.ph_pw_slope1_var, width=8)
+        self.ent_ph_pw_m1.pack(side=LEFT)
+        tk.Label(s1, text="·", bg=self.C_CARD, fg="#64748b").pack(side=LEFT, padx=2)
+        self.ent_ph_pw_b1 = ttk.Entry(s1, textvariable=self.ph_pw_intercept1_var, width=8)
+        self.ent_ph_pw_b1.pack(side=LEFT)
+        # Segment 2 (basic)
+        s2 = tk.Frame(self._ph_pw_frame, bg=self.C_CARD); s2.pack(fill=X, pady=(2, 0))
+        tk.Label(s2, text="Seg2 basic  (V<brk):",  bg=self.C_CARD, fg="#475569",
+                 font=("Helvetica", 8, "bold")).pack(side=LEFT, padx=(0, 4))
+        self.ent_ph_pw_m2 = ttk.Entry(s2, textvariable=self.ph_pw_slope2_var, width=8)
+        self.ent_ph_pw_m2.pack(side=LEFT)
+        tk.Label(s2, text="·", bg=self.C_CARD, fg="#64748b").pack(side=LEFT, padx=2)
+        self.ent_ph_pw_b2 = ttk.Entry(s2, textvariable=self.ph_pw_intercept2_var, width=8)
+        self.ent_ph_pw_b2.pack(side=LEFT)
+
+        btns = tk.Frame(b, bg=self.C_CARD); btns.pack(fill=X, pady=(4, 0))
+        self.btn_ph_apply = ttk.Button(btns, text="Apply", bootstyle="primary",
+                                       width=10, command=self.apply_ph_calibration)
+        self.btn_ph_apply.pack(side=LEFT, padx=(0, 6))
+        self.btn_ph_reset = ttk.Button(btns, text="↺ Reset to Auto",
+                                       bootstyle="secondary-outline",
+                                       width=14, command=self.reset_ph_to_auto)
+        self.btn_ph_reset.pack(side=LEFT)
+
+        tk.Label(b, textvariable=self.ph_cal_stats_var, bg=self.C_CARD,
+                 fg="#475569", font=("Consolas", 8),
+                 wraplength=330, justify="left", anchor="w").pack(fill=X, pady=(4, 0))
+
+        # Initial state: Auto/Single → entries read-only, Apply/Reset disabled
+        self._update_ph_cal_ui()
 
     # ----- Analysis tab -----
     def _build_analysis_tab(self, p):
         # Filter & Smooth and \u0394E Mode moved to the Data tab ("Data Processing"
         # / "Axis & Scaling"). Analysis tab keeps detection/EP settings.
         b = self._card(p, "Peak Detection", subtitle="global thresholds")
+        # PEAK COUNT — emphasized on its own row, full yellow background
+        pk = tk.Frame(b, bg="#f59e0b",
+                      highlightbackground="#f59e0b", highlightthickness=2)
+        pk.pack(fill=X, pady=(0, 6))
+        tk.Label(pk, text="PEAK COUNT", bg="#f59e0b", fg="white",
+                 font=("Helvetica", 8, "bold")
+                 ).pack(side=LEFT, padx=(8, 8), pady=5)
+        ttk.Spinbox(pk, textvariable=self.peak_sets["num_peak"],
+                    from_=1, to=10, increment=1, width=7,
+                    justify="center", style="PeakCount.TSpinbox",
+                    font=("Helvetica", 8, "bold")
+                    ).pack(side=LEFT, pady=5)
+        tk.Label(pk, text="EPs to detect", bg="#facc15", fg="white",
+                 font=("Helvetica", 8, "italic")
+                 ).pack(side=LEFT, padx=(8, 0), pady=5)
+        # Remaining params in a tidy 2×2 grid
         self._spin_grid(b, [
-            ("Peak Count", self.peak_sets["num_peak"], 1, 1, 10),
-            ("Window %", self.peak_sets["search_win"], 1, 5, 100),
-            ("Prominence %", self.algo["prom_factor"], 0.05, 0.01, 1.0),
-            ("Height %", self.algo["ht_factor"], 0.05, 0.01, 1.0),
-            ("Distance %", self.algo["dist_factor"], 0.1, 0.1, 5.0),
+            ("Window %",     self.peak_sets["search_win"], 1,    5,    100),
+            ("Prominence %", self.algo["prom_factor"],     0.05, 0.01, 1.0),
+            ("Height %",     self.algo["ht_factor"],       0.05, 0.01, 1.0),
+            ("Distance %",   self.algo["dist_factor"],     0.1,  0.1,  5.0),
         ], cols=2)
 
         b = self._card(p, "Sensor Methods", subtitle="EP-finding strategy")
@@ -621,14 +780,60 @@ class MSAT_Redesign(ttk.Window):
                         command=self.update_graph_only).pack(side=LEFT)
 
         b = self._card(p, "Inflection Config", subtitle="trendline fit")
+
+        # Mode selector — directly under the title
+        mode = tk.Frame(b, bg=self.C_CARD); mode.pack(fill=X)
+        ttk.Radiobutton(mode, text="Apply to all inflections", value="all",
+                        variable=self.inflection_mode,
+                        command=self._on_inflection_mode_change
+                        ).pack(side=LEFT, padx=(0, 10))
+        ttk.Radiobutton(mode, text="Separate EC/Temp", value="separate",
+                        variable=self.inflection_mode,
+                        command=self._on_inflection_mode_change
+                        ).pack(side=LEFT)
+
+        # Toggles right after the mode radios
+        ttk.Checkbutton(b, text="Merge Lines (between EPs)", variable=self.merge_lines,
+                        bootstyle="info-round-toggle",
+                        command=self.update_graph_only).pack(anchor="w", pady=(4, 0))
+        ttk.Checkbutton(b, text="Show Trendlines", variable=self.show_trendlines,
+                        bootstyle="primary-round-toggle").pack(anchor="w", pady=(2, 0))
+
+        # Primary spinbox group — used for "all" mode, OR "pH/Color" in separate mode
+        self._infl_primary_label = tk.Label(
+            b, text="[applies to all sensors]",
+            bg=self.C_CARD, fg="#94a3b8",
+            font=("Helvetica", 8, "italic"))
+        self._infl_primary_label.pack(anchor="w", pady=(6, 0))
         self._spin_grid(b, [
-            ("Span %", self.peak_sets["int_span"], 1, 1, 50),
-            ("Skip %", self.peak_sets["int_skip"], 1, 0, 20),
-            ("Poly Order", self.peak_sets["int_poly"], 1, 1, 3),
+            ("Span %",     self.peak_sets["int_span"],   1,     1,     50),
+            ("Skip %",     self.peak_sets["int_skip"],   1,     0,     20),
+            ("Poly Order", self.peak_sets["int_poly"],   1,     1,     3),
             ("Slope Diff", self.peak_sets["slope_diff"], 0.001, 0.001, 0.1),
         ], cols=2)
-        ttk.Checkbutton(b, text="Show Trendlines", variable=self.show_trendlines,
-                        bootstyle="primary-round-toggle").pack(anchor="w", pady=(8, 0))
+
+        # ── Sub-cards for EC + Temp (hidden until mode = separate) ─────
+        self._infl_separate_frame = tk.Frame(b, bg=self.C_CARD)
+
+        def sub_grid(parent, title, prefix):
+            wrap = tk.Frame(parent, bg=self.C_CARD,
+                            highlightbackground="#e2e8f0", highlightthickness=1)
+            wrap.pack(fill=X, pady=(4, 0))
+            tk.Label(wrap, text=title, bg=self.C_CARD, fg="#1e40af",
+                     font=("Helvetica", 8, "bold")
+                     ).pack(anchor="w", padx=6, pady=(2, 0))
+            inner = tk.Frame(wrap, bg=self.C_CARD); inner.pack(fill=X, padx=4, pady=(0, 4))
+            self._spin_grid(inner, [
+                ("Span %",     self.peak_sets[f"int_span_{prefix}"],   1,     1,     50),
+                ("Skip %",     self.peak_sets[f"int_skip_{prefix}"],   1,     0,     20),
+                ("Poly Order", self.peak_sets[f"int_poly_{prefix}"],   1,     1,     3),
+                ("Slope Diff", self.peak_sets[f"slope_diff_{prefix}"], 0.001, 0.001, 0.1),
+            ], cols=2)
+        sub_grid(self._infl_separate_frame, "EC",   "ec")
+        sub_grid(self._infl_separate_frame, "Temp", "temp")
+
+        # Initial visibility (mode = "all" by default → separate frame hidden)
+        self._on_inflection_mode_change()
 
     # ----- Display tab -----
     def _build_display_tab(self, p):
@@ -637,11 +842,11 @@ class MSAT_Redesign(ttk.Window):
             ("Point Size", self.vis["pt_size"], 0.1, 0.1, 5),
             ("Font Size", self.vis["font"], 1, 8, 24),
         ], cols=2)
-        row = tk.Frame(b, bg=self.C_CARD); row.pack(fill=X, pady=(8, 0))
+        row = tk.Frame(b, bg=self.C_CARD); row.pack(fill=X, pady=(4, 0))
         self._label(row, "X Maximum").pack(side=LEFT, padx=(0, 8))
         ttk.Entry(row, textvariable=self.xmax_var, width=10).pack(side=LEFT)
 
-        row2 = tk.Frame(b, bg=self.C_CARD); row2.pack(fill=X, pady=(8, 0))
+        row2 = tk.Frame(b, bg=self.C_CARD); row2.pack(fill=X, pady=(4, 0))
         self._label(row2, "EC Unit").pack(side=LEFT, padx=(0, 8))
         self.cmb_ec_unit = ttk.Combobox(row2, textvariable=self.ec_unit_var,
                                         values=["uS/cm", "mS/cm"], state="readonly", width=10)
@@ -776,17 +981,18 @@ class MSAT_Redesign(ttk.Window):
         exp.pack(fill=X, padx=6, pady=(0, 6))
         for c in range(2): exp.columnconfigure(c, weight=1)
         ttk.Button(exp, text="📋 Summary", command=self.copy_summary_text,
-                   bootstyle="light").grid(row=0, column=0, padx=2, pady=2, sticky="ew")
+                   style="SummaryGreen.TButton"
+                   ).grid(row=0, column=0, padx=2, pady=2, sticky="ew")
         ttk.Button(exp, text="📋 Cal Data", command=lambda: self.copy_data("cal"),
-                   bootstyle="light").grid(row=0, column=1, padx=2, pady=2, sticky="ew")
+                   bootstyle="success-outline").grid(row=0, column=1, padx=2, pady=2, sticky="ew")
         ttk.Button(exp, text="📋 Raw Data", command=lambda: self.copy_data("raw"),
-                   bootstyle="light").grid(row=1, column=0, padx=2, pady=2, sticky="ew")
+                   bootstyle="primary-outline").grid(row=1, column=0, padx=2, pady=2, sticky="ew")
         ttk.Button(exp, text="🖼 Image", command=self.copy_img_clipboard,
-                   bootstyle="light").grid(row=1, column=1, padx=2, pady=2, sticky="ew")
-        ttk.Button(exp, text="💾 Save IMG & Config", command=self.save_image,
-                   bootstyle="secondary").grid(row=2, column=0, columnspan=2, padx=2, pady=(4, 2), sticky="ew")
-        ttk.Button(exp, text="💾 Save Config only", command=self.save_config_only,
-                   bootstyle="success").grid(row=3, column=0, columnspan=2, padx=2, pady=(0, 2), sticky="ew")
+                   bootstyle="danger-outline").grid(row=1, column=1, padx=2, pady=2, sticky="ew")
+        ttk.Button(exp, text="💾 Save Results & Config", command=self.save_config_only,
+                   bootstyle="success").grid(row=2, column=0, columnspan=2, padx=2, pady=(4, 2), sticky="ew")
+        ttk.Button(exp, text="💾 Save IMG & Results & Config", command=self.save_image,
+                   bootstyle="warning").grid(row=3, column=0, columnspan=2, padx=2, pady=(0, 2), sticky="ew")
 
     # ============================================================
     # SHARED HELPERS (unchanged behaviour)
@@ -943,8 +1149,8 @@ class MSAT_Redesign(ttk.Window):
     def _build_drop_zone(self, parent):
         """Dashed drag-and-drop zone; falls back to click-to-browse if tkinterdnd2 is absent."""
         self._dz_hovered = False
-        c = tk.Canvas(parent, height=120, bg=self.C_CARD, highlightthickness=0, cursor="hand2")
-        c.pack(fill=X, pady=(0, 8))
+        c = tk.Canvas(parent, height=100, bg=self.C_CARD, highlightthickness=0, cursor="hand2")
+        c.pack(fill=X, pady=(0, 4))
         self._dz = c
         c.bind("<Configure>", lambda e: self._draw_dz())
         c.bind("<Button-1>", lambda e: self.load_local_file())
@@ -963,7 +1169,7 @@ class MSAT_Redesign(ttk.Window):
         c = self._dz
         c.delete("all")
         w = max(c.winfo_width(), 10)
-        h = max(c.winfo_height(), 72)
+        h = max(c.winfo_height(), 56)
         bg     = "#eff6ff" if self._dz_hovered else self.C_CARD
         border = "#3b82f6" if self._dz_hovered else "#94a3b8"
         text1  = "#1d4ed8" if self._dz_hovered else "#475569"
@@ -999,6 +1205,7 @@ class MSAT_Redesign(ttk.Window):
         self.clear_all_data(); self.stop_monitoring()
         self.source_type = "OFFLINE"; self.source_path = path
         self.file_label_var.set(f"OFFLINE: {os.path.basename(path)}")
+        self.file_path_var.set(f"OFFLINE: {os.path.abspath(path)}")
         # Snapshot pristine defaults once (before any sidecar is applied) so
         # "Start over" can restore the original settings later.
         if not hasattr(self, "_default_config"):
@@ -1079,6 +1286,7 @@ class MSAT_Redesign(ttk.Window):
         self.manual_excluded = set()
         self.source_type = "OFFLINE"; self.source_path = ""
         self.file_label_var.set(f"LIVE: MSAT {self.msat_ip}")
+        self.file_path_var.set(f"LIVE: ws://{self.msat_ip}/ws")
         self.live_monitor_active = True
         self.live_phase = "armed"   # armed -> capturing -> armed (seamless)
         self._set_ui_locked(True)
@@ -1256,7 +1464,10 @@ class MSAT_Redesign(ttk.Window):
                 except: df['sec'] = df.index
             else: df['sec'] = df.index
             self.df_raw = df
+            # Compute pH ↔ Volt regression (Auto-mode display values)
+            self._compute_ph_regression()
             self.after(0, self.update_raw_tree_ui)
+            self.after(0, self._update_ph_cal_ui)
             self.after(0, self.calculate_derived_data_ui)
         except Exception as e: print(f"Parse Error: {e}")
 
@@ -1356,16 +1567,26 @@ class MSAT_Redesign(ttk.Window):
         dx = df['X_Axis'].diff()
         df = df.loc[dx.isna() | (dx > 1e-9)]
 
-        if self.ph_autoscale_active and 'Volt' in df.columns and len(df) > 5:
-            n = 5
-            v_start = df['Volt'].iloc[:n].mean()
-            v_end = df['Volt'].iloc[-n:].mean()
-            p_start = self.phi_var.get(); p_end = self.phf_var.get()
-            if abs(v_end - v_start) > 0.001:
-                m = (p_end - p_start) / (v_end - v_start)
-                c = p_start - m * v_start
-                df['pH_Scaled'] = m * df['Volt'] + c
-            else: df['pH_Scaled'] = df['pH']
+        # pH calibration: Manual override applies slope/intercept to Volt;
+        # Auto mode keeps firmware-logged pH untouched.
+        # pH calibration: Manual override applies single-line or piecewise
+        # to Volt; Auto keeps firmware-logged pH untouched.
+        is_manual = (self.ph_cal_mode.get() == "manual")
+        if (is_manual and self._ph_manual_single_applied
+                and 'Volt' in df.columns
+                and self._ph_manual_single[0] is not None):
+            m, b = self._ph_manual_single
+            df['pH_Scaled'] = m * df['Volt'] + b
+        elif (is_manual and self._ph_manual_pw_applied
+              and 'Volt' in df.columns
+              and self._ph_manual_pw[0] is not None):
+            m1, b1, m2, b2, brk = self._ph_manual_pw
+            V = df['Volt'].values
+            acid = V >= brk
+            scaled = np.empty_like(V, dtype=float)
+            scaled[acid]  = m1 * V[acid]  + b1
+            scaled[~acid] = m2 * V[~acid] + b2
+            df['pH_Scaled'] = scaled
         else:
             df['pH_Scaled'] = df['pH'] if 'pH' in df.columns else 0
 
@@ -1451,10 +1672,292 @@ class MSAT_Redesign(ttk.Window):
         if self.df_raw is not None:
             self.calculate_derived_data(analyze=self.analysis_done)
 
-    def apply_ph_scale(self):
-        self.ph_autoscale_active = True
-        self.btn_scale.configure(bootstyle="success", text="✓ Applied")
-        self.calculate_derived_data(analyze=False)
+    # ============================================================
+    # pH CALIBRATION  (Auto/Manual × Single/Piecewise)
+    # ------------------------------------------------------------
+    # Firmware uses 3-point piecewise linear interpolation between
+    # buffers pH 4.01 / 6.86 / 9.18. The analyzer can either fit a
+    # single straight line (averages both firmware segments) or fit
+    # piecewise with the break at the pH 6.86 voltage (matches the
+    # firmware exactly).
+    # ============================================================
+    _PH_BUFFER_BREAK = 6.86      # firmware central buffer (pKa convention)
+
+    def _compute_ph_regression(self):
+        """Regress logged pH vs Volt on df_raw — both single-line and
+        piecewise (split at V where pH ≈ 6.86). Stores results in
+        self._ph_auto_single and self._ph_auto_pw."""
+        self._ph_auto_single = {"slope": None, "intercept": None,
+                                "r2": None, "rmse": None, "n": 0}
+        self._ph_auto_pw = {"m1": None, "b1": None, "r2_1": None, "n_1": 0,
+                            "m2": None, "b2": None, "r2_2": None, "n_2": 0,
+                            "break_V": None}
+        df = self.df_raw
+        if df is None or 'Volt' not in df.columns or 'pH' not in df.columns:
+            return False
+        sub = df[['Volt', 'pH']].dropna()
+        if len(sub) < 5 or sub['Volt'].std(ddof=0) < 1e-6:
+            self._ph_auto_single["n"] = len(sub)
+            return False
+        V = sub['Volt'].values; P = sub['pH'].values
+        # Single-line fit
+        try:
+            m, b = np.polyfit(V, P, 1)
+            resid = P - (m * V + b)
+            var_y = np.var(P)
+            r2 = 1.0 - (np.var(resid) / var_y) if var_y > 0 else 0.0
+            rmse = float(np.sqrt(np.mean(resid ** 2)))
+            self._ph_auto_single = {"slope": float(m), "intercept": float(b),
+                                    "r2": float(r2), "rmse": rmse,
+                                    "n": int(len(sub))}
+        except Exception as exc:
+            print(f"[pH cal] single-line regression failed: {exc}")
+            return False
+        # Piecewise: split where single-line fit predicts pH = 6.86
+        try:
+            break_V = (self._PH_BUFFER_BREAK - b) / m if m else None
+            if break_V is None:
+                return True
+            acid_mask = V >= break_V
+            base_mask = ~acid_mask
+            def fit(mask):
+                if int(mask.sum()) < 5: return None
+                Vx, Px = V[mask], P[mask]
+                m_, b_ = np.polyfit(Vx, Px, 1)
+                rs = Px - (m_ * Vx + b_)
+                vy = np.var(Px)
+                r2_ = 1.0 - (np.var(rs)/vy) if vy > 0 else 0.0
+                return float(m_), float(b_), float(r2_), int(mask.sum())
+            r_acid = fit(acid_mask); r_base = fit(base_mask)
+            if r_acid and r_base:
+                m1, b1, r2_1, n1 = r_acid
+                m2, b2, r2_2, n2 = r_base
+                self._ph_auto_pw = {"m1": m1, "b1": b1, "r2_1": r2_1, "n_1": n1,
+                                    "m2": m2, "b2": b2, "r2_2": r2_2, "n_2": n2,
+                                    "break_V": float(break_V)}
+        except Exception as exc:
+            print(f"[pH cal] piecewise regression failed: {exc}")
+        return True
+
+    def _on_ph_mode_change(self):
+        """Radio callback: Auto ↔ Manual."""
+        if self.ph_cal_mode.get() == "manual":
+            # Pre-fill entries from auto values for the current fit type
+            self._prefill_manual_entries()
+        else:
+            self._ph_manual_single_applied = False
+            self._ph_manual_pw_applied = False
+        self._update_ph_cal_ui()
+        if self.df_raw is not None:
+            self.calculate_derived_data(analyze=False)
+
+    def _on_ph_fit_type_change(self):
+        """Radio callback: Single ↔ Piecewise."""
+        self._show_fit_subframe()
+        if self.ph_cal_mode.get() == "manual":
+            self._prefill_manual_entries()
+        self._update_ph_cal_ui()
+        if self.df_raw is not None:
+            self.calculate_derived_data(analyze=False)
+
+    def _prefill_manual_entries(self):
+        """When user switches into Manual, pre-fill the visible entries
+        with the corresponding auto values as a starting point."""
+        if self.ph_fit_type.get() == "single":
+            a = self._ph_auto_single
+            if a["slope"] is not None:
+                self.ph_slope_var.set(f"{a['slope']:.4f}")
+                self.ph_intercept_var.set(f"{a['intercept']:.4f}")
+        else:
+            a = self._ph_auto_pw
+            if a["m1"] is not None:
+                self.ph_pw_slope1_var.set(f"{a['m1']:.4f}")
+                self.ph_pw_intercept1_var.set(f"{a['b1']:.4f}")
+                self.ph_pw_slope2_var.set(f"{a['m2']:.4f}")
+                self.ph_pw_intercept2_var.set(f"{a['b2']:.4f}")
+                self.ph_pw_break_var.set(f"{a['break_V']:.4f}")
+
+    def _show_fit_subframe(self):
+        """Pack/unpack the Single or Piecewise entry block based on fit_type."""
+        try:
+            if self.ph_fit_type.get() == "single":
+                self._ph_pw_frame.pack_forget()
+                self._ph_single_frame.pack(fill=X, pady=(4, 0))
+            else:
+                self._ph_single_frame.pack_forget()
+                self._ph_pw_frame.pack(fill=X, pady=(4, 0))
+        except (AttributeError, tk.TclError):
+            pass
+
+    def _on_inflection_mode_change(self):
+        """Radio callback: show/hide EC + Temp sub-cards and re-label the
+        primary group ([all sensors] vs [pH / Color])."""
+        try:
+            if self.inflection_mode.get() == "separate":
+                self._infl_separate_frame.pack(fill=X, pady=(4, 0))
+                self._infl_primary_label.config(text="[pH / Color]",
+                                                fg="#1e40af")
+            else:
+                self._infl_separate_frame.pack_forget()
+                self._infl_primary_label.config(text="[applies to all sensors]",
+                                                fg="#94a3b8")
+        except (AttributeError, tk.TclError):
+            pass
+
+    def _inflection_params(self, sensor_name):
+        """Return (span_pct, skip_pct, poly, slope_diff) for a given sensor.
+        Mode 'all'      → primary set (int_span/int_skip/int_poly/slope_diff)
+        Mode 'separate' → EC and Temp use _ec/_temp overrides; pH and Color
+                          still use the primary set."""
+        ps = self.peak_sets
+        if self.inflection_mode.get() == "separate":
+            if sensor_name == "EC":
+                return (ps["int_span_ec"].get(), ps["int_skip_ec"].get(),
+                        ps["int_poly_ec"].get(), ps["slope_diff_ec"].get())
+            if sensor_name == "Temp":
+                return (ps["int_span_temp"].get(), ps["int_skip_temp"].get(),
+                        ps["int_poly_temp"].get(), ps["slope_diff_temp"].get())
+        return (ps["int_span"].get(), ps["int_skip"].get(),
+                ps["int_poly"].get(), ps["slope_diff"].get())
+
+    def apply_ph_calibration(self):
+        """Apply button (Manual mode): parse the visible entries, validate,
+        and recompute pH from Volt accordingly."""
+        if self.ph_cal_mode.get() != "manual":
+            return
+        if self.ph_fit_type.get() == "single":
+            try:
+                slope = float(self.ph_slope_var.get())
+                intercept = float(self.ph_intercept_var.get())
+            except (ValueError, tk.TclError):
+                messagebox.showerror("pH Calibration",
+                                     "Slope and Intercept must be numbers.")
+                return
+            if slope >= 0:
+                if not messagebox.askyesno(
+                    "pH Calibration",
+                    f"Slope = {slope:.4f} is non-negative.\n"
+                    "For the MSAT pH circuit the slope is normally negative.\n\n"
+                    "Apply anyway?"):
+                    return
+            self._ph_manual_single = (slope, intercept)
+            self._ph_manual_single_applied = True
+            self._ph_manual_pw_applied = False
+        else:  # piecewise
+            try:
+                m1 = float(self.ph_pw_slope1_var.get())
+                b1 = float(self.ph_pw_intercept1_var.get())
+                m2 = float(self.ph_pw_slope2_var.get())
+                b2 = float(self.ph_pw_intercept2_var.get())
+                brk = float(self.ph_pw_break_var.get())
+            except (ValueError, tk.TclError):
+                messagebox.showerror("pH Calibration",
+                                     "All piecewise fields must be numbers.")
+                return
+            if m1 >= 0 or m2 >= 0:
+                if not messagebox.askyesno(
+                    "pH Calibration",
+                    f"Slope(s) non-negative: seg1={m1:.4f}, seg2={m2:.4f}.\n"
+                    "For the MSAT pH circuit slopes are normally negative.\n\n"
+                    "Apply anyway?"):
+                    return
+            self._ph_manual_pw = (m1, b1, m2, b2, brk)
+            self._ph_manual_pw_applied = True
+            self._ph_manual_single_applied = False
+        self._update_ph_cal_ui()
+        if self.df_raw is not None:
+            self.calculate_derived_data(analyze=False)
+
+    def reset_ph_to_auto(self):
+        """↺ Reset to Auto: discard any manual override (both single & pw)."""
+        self._ph_manual_single_applied = False
+        self._ph_manual_single = (None, None)
+        self._ph_manual_pw_applied = False
+        self._ph_manual_pw = (None, None, None, None, None)
+        self.ph_cal_mode.set("auto")
+        self._update_ph_cal_ui()
+        if self.df_raw is not None:
+            self.calculate_derived_data(analyze=False)
+
+    def _update_ph_cal_ui(self):
+        """Refresh entries/buttons/stats per current mode + fit_type."""
+        mode = self.ph_cal_mode.get()
+        fit  = self.ph_fit_type.get()
+        # Show the correct sub-frame
+        self._show_fit_subframe()
+
+        # Stats line
+        if fit == "single":
+            a = self._ph_auto_single
+            if a["slope"] is not None:
+                mv = (1000.0 / a["slope"]) if a["slope"] else 0.0
+                stats = (f"R² = {a['r2']:.4f} · RMSE = {a['rmse']:.3f} pH · "
+                         f"{mv:.1f} mV/pH · n = {a['n']}")
+            else:
+                stats = "(no Volt/pH regression — load a data file)"
+        else:  # piecewise
+            a = self._ph_auto_pw
+            if a["m1"] is not None and a["m2"] is not None:
+                mv1 = (1000.0 / a["m1"]) if a["m1"] else 0.0
+                mv2 = (1000.0 / a["m2"]) if a["m2"] else 0.0
+                stats = (f"acidic: R²={a['r2_1']:.3f} {mv1:.1f}mV/pH n={a['n_1']}  ·  "
+                         f"basic: R²={a['r2_2']:.3f} {mv2:.1f}mV/pH n={a['n_2']}")
+            else:
+                stats = "(no Volt/pH regression — load a data file)"
+        self.ph_cal_stats_var.set(stats)
+
+        try:
+            # Auto: fill entries from auto values, read-only, buttons disabled
+            if mode == "auto":
+                if fit == "single":
+                    a = self._ph_auto_single
+                    if a["slope"] is not None:
+                        self.ph_slope_var.set(f"{a['slope']:.4f}")
+                        self.ph_intercept_var.set(f"{a['intercept']:.4f}")
+                    else:
+                        self.ph_slope_var.set("—"); self.ph_intercept_var.set("—")
+                    self.ent_ph_slope.configure(state="readonly")
+                    self.ent_ph_inter.configure(state="readonly")
+                else:
+                    a = self._ph_auto_pw
+                    if a["m1"] is not None:
+                        self.ph_pw_slope1_var.set(f"{a['m1']:.4f}")
+                        self.ph_pw_intercept1_var.set(f"{a['b1']:.4f}")
+                        self.ph_pw_slope2_var.set(f"{a['m2']:.4f}")
+                        self.ph_pw_intercept2_var.set(f"{a['b2']:.4f}")
+                        self.ph_pw_break_var.set(f"{a['break_V']:.4f}")
+                    else:
+                        for v in (self.ph_pw_slope1_var, self.ph_pw_intercept1_var,
+                                  self.ph_pw_slope2_var, self.ph_pw_intercept2_var,
+                                  self.ph_pw_break_var):
+                            v.set("—")
+                    for e in (self.ent_ph_pw_m1, self.ent_ph_pw_b1,
+                              self.ent_ph_pw_m2, self.ent_ph_pw_b2,
+                              self.ent_ph_break):
+                        e.configure(state="readonly")
+                self.btn_ph_apply.configure(state="disabled")
+                self.btn_ph_reset.configure(state="disabled")
+            else:  # manual
+                if fit == "single":
+                    self.ent_ph_slope.configure(state="normal")
+                    self.ent_ph_inter.configure(state="normal")
+                    applied = self._ph_manual_single_applied
+                else:
+                    for e in (self.ent_ph_pw_m1, self.ent_ph_pw_b1,
+                              self.ent_ph_pw_m2, self.ent_ph_pw_b2,
+                              self.ent_ph_break):
+                        e.configure(state="normal")
+                    applied = self._ph_manual_pw_applied
+                self.btn_ph_apply.configure(state="normal")
+                self.btn_ph_reset.configure(state="normal")
+                if applied:
+                    self.btn_ph_apply.configure(text="✓ Applied",
+                                                bootstyle="success")
+                else:
+                    self.btn_ph_apply.configure(text="Apply",
+                                                bootstyle="primary")
+        except (AttributeError, tk.TclError):
+            pass
 
     def on_axis_entry_change(self, key):
         try:
@@ -1499,10 +2002,8 @@ class MSAT_Redesign(ttk.Window):
                 df = self.df_cal  # too few points in range -> fall back to full
         x = df['X_Axis'].values
         target_peaks = self.peak_sets["num_peak"].get()
-        span_pct = self.peak_sets["int_span"].get()
-        skip_pct = self.peak_sets["int_skip"].get()
-        poly = self.peak_sets["int_poly"].get()
-        slope_thresh = self.peak_sets["slope_diff"].get()
+        # Inflection params are now per-sensor — resolved inside the loop
+        # via self._inflection_params(name).
         p_prom = self.algo["prom_factor"].get()
         p_ht = self.algo["ht_factor"].get()
         p_dist = self.algo["dist_factor"].get()
@@ -1536,6 +2037,8 @@ class MSAT_Redesign(ttk.Window):
             ("Temp", "Sm_Temp", "method_temp", "d1_T", "d2_T"),
         ]:
             method = self.peak_sets[key_meth].get()
+            # Per-sensor inflection params (mode-aware)
+            span_pct, skip_pct, poly, slope_thresh = self._inflection_params(name)
             y_sm = df[col_y].values
             final_eps = [None] * target_peaks
             d_check = df[d2_col].values if method == 2 else df[d1_col].values
@@ -1575,8 +2078,67 @@ class MSAT_Redesign(ttk.Window):
                 final_eps[i] = res
             self.found_eps[name] = final_eps
 
+        # Merge-Lines post-processing: for sensors with ≥2 inflection EPs,
+        # replace internal trendline pairs with a single shared (averaged)
+        # line spanning EP[i] → EP[i+1] and recompute each EP at the new
+        # line intersections.
+        if self.merge_lines.get():
+            for name, items in list(self.trendlines_data.items()):
+                if isinstance(items, list) and len(items) >= 2:
+                    self._apply_merge_to_ep(name, items)
+
         self.analysis_done = True
         self.update_summary_tree(); self.refresh_plots()
+
+    def _find_real_root_near(self, diff_poly, guess):
+        """Return the real root of `diff_poly` closest to `guess`. Fallback
+        to `guess` if none found / on error."""
+        try:
+            roots = np.roots(diff_poly)
+            real = roots[np.isreal(roots)].real
+            if len(real) == 0:
+                return float(guess)
+            return float(min(real, key=lambda r: abs(r - guess)))
+        except Exception:
+            return float(guess)
+
+    def _apply_merge_to_ep(self, name, items):
+        """For one sensor channel with ≥2 inflection EPs: compute merged
+        polynomials between consecutive EPs (mean of pR[i] and pL[i+1]) and
+        recompute each EP as the intersection of its bordering lines.
+        Stores the merged polys on each item as 'merged_next' so the plot
+        layer can draw them with the proper skip buffer."""
+        n = len(items)
+        merged_polys = []
+        for i in range(n - 1):
+            pa = np.asarray(items[i].get('pR'))
+            pb = np.asarray(items[i + 1].get('pL'))
+            if pa is None or pb is None or pa.shape != pb.shape:
+                merged_polys.append(None)
+                continue
+            mp = (pa + pb) / 2.0
+            merged_polys.append(mp)
+            items[i]['merged_next'] = mp
+        # Edge: EP[0] = intersection of pL[0] with merged[0]
+        if merged_polys and merged_polys[0] is not None:
+            diff = np.subtract(items[0]['pL'], merged_polys[0])
+            items[0]['root'] = self._find_real_root_near(diff, items[0]['root'])
+        # Middle EPs
+        for i in range(1, n - 1):
+            mp_prev, mp_next = merged_polys[i - 1], merged_polys[i]
+            if mp_prev is None or mp_next is None:
+                continue
+            diff = np.subtract(mp_prev, mp_next)
+            items[i]['root'] = self._find_real_root_near(diff, items[i]['root'])
+        # Edge: EP[-1] = intersection of merged[-1] with pR[-1]
+        if merged_polys and merged_polys[-1] is not None:
+            diff = np.subtract(merged_polys[-1], items[-1]['pR'])
+            items[-1]['root'] = self._find_real_root_near(diff, items[-1]['root'])
+        # Push the recomputed roots back into self.found_eps[name]
+        if name in self.found_eps:
+            for i in range(min(n, len(self.found_eps[name]))):
+                if self.found_eps[name][i] is not None:
+                    self.found_eps[name][i] = items[i]['root']
 
     def update_summary_tree(self):
         self.tree.delete(*self.tree.get_children())
@@ -1731,15 +2293,62 @@ class MSAT_Redesign(ttk.Window):
             # mS) land on the displayed unit (they were drawn ~0 on a uS axis).
             tl_lw = 4.0 if is_export else 2.6
             tl_dw = 2.0 if is_export else 1.3
-            for item in self.trendlines_data[name]:
-                y_l_fit = np.polyval(item['pL'], item['xL']) * y_factor
-                ax1.plot(item['xL'], y_l_fit, color='red', linewidth=tl_lw, zorder=5)
-                y_r_fit = np.polyval(item['pR'], item['xR']) * y_factor
-                ax1.plot(item['xR'], y_r_fit, color='red', linewidth=tl_lw, zorder=5)
-                y_root_l = np.polyval(item['pL'], item['root']) * y_factor
-                y_root_r = np.polyval(item['pR'], item['root']) * y_factor
-                ax1.plot([item['xL'][-1], item['root']], [y_l_fit[-1], y_root_l], color='red', linewidth=tl_dw, linestyle=':')
-                ax1.plot([item['xR'][0], item['root']], [y_r_fit[0], y_root_r], color='red', linewidth=tl_dw, linestyle=':')
+            items = self.trendlines_data[name]
+            merge = bool(self.merge_lines.get()) and len(items) > 1
+            for i, item in enumerate(items):
+                # LEFT line of this EP: skip if merged with previous EP's right
+                if not (merge and i > 0):
+                    y_l_fit = np.polyval(item['pL'], item['xL']) * y_factor
+                    ax1.plot(item['xL'], y_l_fit, color='red', linewidth=tl_lw, zorder=5)
+                    y_root_l = np.polyval(item['pL'], item['root']) * y_factor
+                    ax1.plot([item['xL'][-1], item['root']],
+                             [y_l_fit[-1], y_root_l],
+                             color='red', linewidth=tl_dw, linestyle=':')
+                # RIGHT line of this EP: skip if merged with next EP's left
+                if not (merge and i < len(items) - 1):
+                    y_r_fit = np.polyval(item['pR'], item['xR']) * y_factor
+                    ax1.plot(item['xR'], y_r_fit, color='red', linewidth=tl_lw, zorder=5)
+                    y_root_r = np.polyval(item['pR'], item['root']) * y_factor
+                    ax1.plot([item['xR'][0], item['root']],
+                             [y_r_fit[0], y_root_r],
+                             color='red', linewidth=tl_dw, linestyle=':')
+            # Merged shared lines: one per gap between consecutive EPs.
+            # Drawn as a solid line over [root[i]+skip , root[i+1]-skip],
+            # with dotted extensions from each end to the EP marker — same
+            # visual convention as the edge lines.
+            if merge:
+                _, skip_pct, _, _ = self._inflection_params(name)
+                x_total = float(x.max() - x.min())
+                skip_x = max(0.0, x_total * skip_pct / 100.0)
+                for i in range(len(items) - 1):
+                    a = items[i]; b = items[i + 1]
+                    p_merge = a.get('merged_next')
+                    if p_merge is None:
+                        pa = np.asarray(a.get('pR'))
+                        pb = np.asarray(b.get('pL'))
+                        if pa is None or pb is None or pa.shape != pb.shape:
+                            continue
+                        p_merge = (pa + pb) / 2.0
+                    x_start = a['root'] + skip_x
+                    x_end   = b['root'] - skip_x
+                    if x_end <= x_start:
+                        # too close; just draw a thin connector
+                        x_start, x_end = a['root'], b['root']
+                    x_grid = np.linspace(x_start, x_end, 50)
+                    y_grid = np.polyval(p_merge, x_grid) * y_factor
+                    ax1.plot(x_grid, y_grid, color='red',
+                             linewidth=tl_lw, zorder=5)
+                    # Dotted extensions from line ends to the EP markers
+                    y_start = np.polyval(p_merge, x_start) * y_factor
+                    y_end   = np.polyval(p_merge, x_end)   * y_factor
+                    y_root_a = np.polyval(p_merge, a['root']) * y_factor
+                    y_root_b = np.polyval(p_merge, b['root']) * y_factor
+                    ax1.plot([a['root'], x_start],
+                             [y_root_a, y_start],
+                             color='red', linewidth=tl_dw, linestyle=':')
+                    ax1.plot([x_end, b['root']],
+                             [y_end, y_root_b],
+                             color='red', linewidth=tl_dw, linestyle=':')
 
         with np.errstate(divide='ignore', invalid='ignore'):
             if method == 2:
@@ -1971,67 +2580,66 @@ class MSAT_Redesign(ttk.Window):
         # Prefix saved files with "XO-" so they sort separately from the raw
         # data .txt files when the folder is listed alphabetically.
         save_name = "XO-" + base_name
-        # output paths (4 images + 1 config sidecar)
+        # output paths (4 images + 1 merged config-with-results sidecar)
         out_files = [
-            ("PNG  (600 DPI)", save_name + ".png"),
-            ("TIFF (600 DPI)", save_name + ".tif"),
-            ("SVG  (vector)",  save_name + ".svg"),
-            ("PDF  (vector)",  save_name + ".pdf"),
-            ("CONFIG (sidecar)", save_name + "-config.txt"),
+            ("PNG  (600 DPI)",         save_name + ".png"),
+            ("TIFF (600 DPI)",         save_name + ".tif"),
+            ("SVG  (vector)",          save_name + ".svg"),
+            ("PDF  (vector)",          save_name + ".pdf"),
+            ("CONFIG + RESULTS (json)", save_name + "-config.txt"),
         ]
         full_paths = [os.path.join(base_dir, fn) for _, fn in out_files]
-        any_exists = any(os.path.exists(p) for p in full_paths)
+        existing = [fn for (_, fn), fp in zip(out_files, full_paths) if os.path.exists(fp)]
 
-        # ── Confirmation dialog ──────────────────────────────────────────
-        dlg = tk.Toplevel(self)
-        dlg.title("Save Image")
-        dlg.resizable(False, False)
-        dlg.grab_set()
-        dlg.lift()
+        # ── Single confirmation popup ──────────────────────────────────
+        dlg = tk.Toplevel(self); dlg.title("Save IMG & Results & Config")
+        dlg.resizable(False, False); dlg.grab_set(); dlg.lift()
+        try: dlg.transient(self)
+        except Exception: pass
 
         ttk.Label(dlg, text="The following files will be saved:",
                   font=("Arial", 10, "bold")).pack(anchor="w", padx=16, pady=(14, 4))
-
         for (label, fn), fp in zip(out_files, full_paths):
             mark = "  ⚠ already exists" if os.path.exists(fp) else ""
             ttk.Label(dlg, text=f"  •  {label}:  {fn}{mark}",
                       font=("Consolas", 9)).pack(anchor="w", padx=24, pady=1)
-
         ttk.Label(dlg, text=f"Folder:  {base_dir}",
                   font=("Arial", 8), foreground="gray").pack(anchor="w", padx=20, pady=(6, 2))
 
-        if any_exists:
-            ttk.Label(dlg, text="⚠  One or more files already exist and will be overwritten.",
-                      font=("Arial", 9), foreground="#e67e00").pack(anchor="w", padx=16, pady=(4, 2))
+        if existing:
+            warn_text = (f"🔴⚠ Warning: {len(existing)} file(s) already exist "
+                         f"and will be OVERWRITTEN!")
+            ttk.Label(dlg, text=warn_text, font=("Arial", 9, "bold"),
+                      foreground="#dc2626").pack(anchor="w", padx=16, pady=(8, 2))
 
-        btn_frame = ttk.Frame(dlg)
-        btn_frame.pack(fill=X, padx=16, pady=(10, 14))
-
-        result = [False]
-
-        def do_save():
-            result[0] = True
-            dlg.destroy()
-
-        def do_cancel():
-            dlg.destroy()
-
-        save_label = "💾 Overwrite" if any_exists else "💾 Save"
-        ttk.Button(btn_frame, text=save_label, command=do_save,
-                   bootstyle="primary").pack(side=LEFT, padx=(0, 8))
+        btn_frame = ttk.Frame(dlg); btn_frame.pack(fill=X, padx=16, pady=(12, 14))
+        result = {"ok": False}
+        def do_ok():    result["ok"] = True;  dlg.destroy()
+        def do_cancel(): dlg.destroy()
+        ok_label = "💾 OK (Overwrite)" if existing else "💾 OK"
+        ttk.Button(btn_frame, text=ok_label, command=do_ok,
+                   bootstyle=("danger" if existing else "primary")
+                   ).pack(side=LEFT, padx=(0, 8))
         ttk.Button(btn_frame, text="Cancel", command=do_cancel,
                    bootstyle="secondary-outline").pack(side=LEFT)
-
+        self._center_dialog(dlg)
         dlg.wait_window()
+        if not result["ok"]:
+            return
 
-        if result[0]:
-            self._save_all_formats(base_dir, save_name)
-            # Also drop the analysis config sidecar so this exact view can
-            # be reproduced by loading the same data file again.
-            try:
-                self._save_config_sidecar(base_dir, base_name)
-            except Exception as exc:
-                print(f"[config] save failed: {exc}")
+        # ── Actually save (no second popup; errors only show if any) ──
+        errors = self._save_all_formats(base_dir, save_name)
+        # Merged config+results: writes one XO-*-config.txt and removes any
+        # legacy XO-*-summary.txt left behind from older builds.
+        try:
+            self._save_config_sidecar(base_dir, base_name)
+        except Exception as exc:
+            errors.append(f"{save_name}-config.txt: {exc}")
+        if errors:
+            messagebox.showerror(
+                "Save IMG & Results & Config",
+                "Some files could not be saved:\n" + "\n".join(errors) +
+                f"\n\nFolder:\n{base_dir}")
 
     def _save_all_formats(self, base_dir, base_name):
         """Render the figure once and export PNG 600 dpi, TIFF 600 dpi, SVG, PDF."""
@@ -2059,13 +2667,9 @@ class MSAT_Redesign(ttk.Window):
                 errors.append(f"{fn}: {exc}")
 
         plt.close(fig)
-
-        if errors:
-            messagebox.showerror("Save Image",
-                                 "Some files could not be saved:\n" + "\n".join(errors))
-        else:
-            messagebox.showinfo("Save Image",
-                                f"5 files saved successfully!\n\nFolder:\n{base_dir}")
+        # Return errors so the caller (save_image) can build a single
+        # combined popup covering images + config sidecar.
+        return errors
 
     def create_export_fig(self, output, to_buffer=False):
         win_w = self.tab_dash.winfo_width(); win_h = self.tab_dash.winfo_height()
@@ -2109,14 +2713,37 @@ class MSAT_Redesign(ttk.Window):
         g("xaxis", self.xaxis_var); g("density", self.density_var); g("conc", self.conc_var)
         g("xmax", self.xmax_var); g("ec_unit", self.ec_unit_var); g("ec_unit_auto", self.ec_unit_auto)
         g("de_mode", self.de_mode); g("ph_fixed_mode", self.ph_fixed_mode)
-        # pH calibration
-        g("phi", self.phi_var); g("phf", self.phf_var)
-        cfg["ph_autoscale_active"] = bool(self.ph_autoscale_active)
+        # pH calibration (Volt → pH): auto regression (single + piecewise)
+        # plus optional manual override of the active fit type.
+        a_s = self._ph_auto_single; a_p = self._ph_auto_pw
+        ms_slope, ms_int = self._ph_manual_single
+        mp_m1, mp_b1, mp_m2, mp_b2, mp_brk = self._ph_manual_pw
+        cfg["ph_recal"] = {
+            "mode":      self.ph_cal_mode.get(),
+            "fit_type":  self.ph_fit_type.get(),
+            "auto_single":    {"slope": a_s.get("slope"),
+                               "intercept": a_s.get("intercept"),
+                               "r2": a_s.get("r2"), "rmse": a_s.get("rmse"),
+                               "n": a_s.get("n")},
+            "auto_piecewise": {"m1": a_p.get("m1"), "b1": a_p.get("b1"),
+                               "r2_1": a_p.get("r2_1"), "n_1": a_p.get("n_1"),
+                               "m2": a_p.get("m2"), "b2": a_p.get("b2"),
+                               "r2_2": a_p.get("r2_2"), "n_2": a_p.get("n_2"),
+                               "break_V": a_p.get("break_V")},
+            "manual_single":    ({"slope": ms_slope, "intercept": ms_int}
+                                 if self._ph_manual_single_applied else None),
+            "manual_piecewise": ({"m1": mp_m1, "b1": mp_b1,
+                                  "m2": mp_m2, "b2": mp_b2,
+                                  "break_V": mp_brk}
+                                 if self._ph_manual_pw_applied else None),
+        }
         # Smoothing / peak detection / sensor methods / inflection
         cfg["algo"] = {k: self.algo[k].get() for k in self.algo}
         cfg["peak_sets"] = {k: self.peak_sets[k].get() for k in self.peak_sets}
         # Toggles
         g("show_trendlines", self.show_trendlines)
+        g("merge_lines", self.merge_lines)
+        g("inflection_mode", self.inflection_mode)
         g("temp_last_only", self.temp_last_only)
         g("show_dt_in_graph", self.show_dt_in_graph)
         g("dt_mode", self.dt_mode)
@@ -2137,6 +2764,12 @@ class MSAT_Redesign(ttk.Window):
 
     def _apply_config(self, cfg):
         if not isinstance(cfg, dict): return
+        # Merged format ({_meta:{format:"merged_v1"}, config:{...}, results:{...}})
+        # is unwrapped to the inner config dict; legacy flat configs are used
+        # as-is. The results section is ignored on load — we apply settings
+        # only and let the user press Run Analysis to regenerate EPs.
+        if cfg.get("_meta", {}).get("format") == "merged_v1" and "config" in cfg:
+            cfg = cfg["config"] or {}
         def s(name, var, conv=None):
             if name in cfg:
                 try:
@@ -2152,11 +2785,57 @@ class MSAT_Redesign(ttk.Window):
         s("ec_unit_auto", self.ec_unit_auto, bool)
         s("de_mode", self.de_mode)
         s("ph_fixed_mode", self.ph_fixed_mode, bool)
-        s("phi", self.phi_var, float)
-        s("phf", self.phf_var, float)
-        if "ph_autoscale_active" in cfg:
-            try: self.ph_autoscale_active = bool(cfg["ph_autoscale_active"])
-            except Exception: pass
+        # pH calibration block. Schema:
+        #   {mode, fit_type, auto_single{}, auto_piecewise{},
+        #    manual_single{} | None, manual_piecewise{} | None}
+        # Legacy phi/phf/ph_autoscale_active fields are silently ignored.
+        ph_re = cfg.get("ph_recal")
+        if isinstance(ph_re, dict):
+            mode = ph_re.get("mode", "auto")
+            fit  = ph_re.get("fit_type", "single")
+            self.ph_cal_mode.set("manual" if mode == "manual" else "auto")
+            self.ph_fit_type.set("piecewise" if fit == "piecewise" else "single")
+            # Legacy flat schema (no nested manual_single / manual_piecewise)?
+            if "manual_slope" in ph_re and ph_re.get("manual_slope") is not None:
+                try:
+                    self._ph_manual_single = (float(ph_re["manual_slope"]),
+                                              float(ph_re["manual_intercept"]))
+                    self._ph_manual_single_applied = True
+                except Exception:
+                    self._ph_manual_single_applied = False
+            # New nested schema
+            ms = ph_re.get("manual_single")
+            if isinstance(ms, dict):
+                try:
+                    self._ph_manual_single = (float(ms["slope"]),
+                                              float(ms["intercept"]))
+                    self._ph_manual_single_applied = True
+                    self.ph_slope_var.set(f"{self._ph_manual_single[0]:.4f}")
+                    self.ph_intercept_var.set(f"{self._ph_manual_single[1]:.4f}")
+                except Exception:
+                    self._ph_manual_single_applied = False
+            else:
+                if "manual_single" in ph_re:
+                    self._ph_manual_single_applied = False
+            mp = ph_re.get("manual_piecewise")
+            if isinstance(mp, dict):
+                try:
+                    self._ph_manual_pw = (float(mp["m1"]), float(mp["b1"]),
+                                          float(mp["m2"]), float(mp["b2"]),
+                                          float(mp["break_V"]))
+                    self._ph_manual_pw_applied = True
+                    self.ph_pw_slope1_var.set(f"{self._ph_manual_pw[0]:.4f}")
+                    self.ph_pw_intercept1_var.set(f"{self._ph_manual_pw[1]:.4f}")
+                    self.ph_pw_slope2_var.set(f"{self._ph_manual_pw[2]:.4f}")
+                    self.ph_pw_intercept2_var.set(f"{self._ph_manual_pw[3]:.4f}")
+                    self.ph_pw_break_var.set(f"{self._ph_manual_pw[4]:.4f}")
+                except Exception:
+                    self._ph_manual_pw_applied = False
+            else:
+                if "manual_piecewise" in ph_re:
+                    self._ph_manual_pw_applied = False
+        try: self._update_ph_cal_ui()
+        except Exception: pass
         for d_name in ("algo", "peak_sets", "vis", "yaxis", "yaxis_digits", "yaxis_interval"):
             d = cfg.get(d_name)
             target = getattr(self, d_name, None)
@@ -2166,6 +2845,10 @@ class MSAT_Redesign(ttk.Window):
                         try: target[k].set(v)
                         except Exception: pass
         s("show_trendlines", self.show_trendlines, bool)
+        s("merge_lines", self.merge_lines, bool)
+        s("inflection_mode", self.inflection_mode)
+        try: self._on_inflection_mode_change()
+        except Exception: pass
         s("temp_last_only", self.temp_last_only, bool)
         s("show_dt_in_graph", self.show_dt_in_graph, bool)
         s("dt_mode", self.dt_mode)
@@ -2177,10 +2860,75 @@ class MSAT_Redesign(ttk.Window):
             except Exception:
                 self.manual_excluded = set()
 
+    def _center_dialog(self, dlg):
+        """Center a Toplevel on the current screen. Call after all widgets
+        are packed so winfo_reqwidth/height returns the true size."""
+        dlg.update_idletasks()
+        w = dlg.winfo_reqwidth()  or dlg.winfo_width()
+        h = dlg.winfo_reqheight() or dlg.winfo_height()
+        sw = dlg.winfo_screenwidth()
+        sh = dlg.winfo_screenheight()
+        x = max(0, (sw - w) // 2)
+        y = max(0, (sh - h) // 2)
+        dlg.geometry(f"{w}x{h}+{x}+{y}")
+
+    def _collect_results(self):
+        """Snapshot the current EP-analysis results (found EPs + summary
+        table TSV) for embedding alongside the config in the merged file."""
+        # Convert numpy / native types to JSON-safe primitives
+        feps = {}
+        for k, lst in (getattr(self, "found_eps", {}) or {}).items():
+            feps[k] = [None if v is None else float(v) for v in lst]
+        param_col = ["Filename"]
+        value_col = [os.path.basename(self.source_path)
+                     if getattr(self, "source_path", None) else ""]
+        for item in self.tree.get_children():
+            vals = self.tree.item(item)["values"]
+            if len(vals) >= 3:
+                param_col.append(str(vals[1])); value_col.append(str(vals[2]))
+            elif len(vals) == 2:
+                param_col.append(str(vals[0])); value_col.append(str(vals[1]))
+            else:
+                param_col.append(""); value_col.append("")
+        summary_tsv = "\t".join(param_col) + "\n" + "\t".join(value_col) + "\n"
+        # Pull ΔT out of the summary if present (best-effort)
+        dT = None
+        for p, v in zip(param_col, value_col):
+            if "delta t" in p.lower() or p.lower() == "delta_t" or p.lower() == "dt":
+                try: dT = float(v)
+                except Exception: pass
+                break
+        return {
+            "found_eps": feps,
+            "delta_T":   dT,
+            "summary_tsv": summary_tsv,
+            "summary_params": param_col,
+            "summary_values": value_col,
+        }
+
+    def _collect_full_payload(self):
+        """Merged save format: {_meta, config, results}."""
+        return {
+            "_meta": {
+                "format":   "merged_v1",
+                "version":  "V.Y2026.88.210",
+                "saved_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+            },
+            "config":  self._collect_config(),
+            "results": self._collect_results(),
+        }
+
     def _save_config_sidecar(self, base_dir, base_name):
+        """Save merged file: settings + EP results + summary in one JSON.
+        Path: XO-<base_name>-config.txt (filename preserved for compat).
+        Also deletes any legacy XO-<base_name>-summary.txt left behind."""
         p = os.path.join(base_dir, "XO-" + base_name + "-config.txt")
         with open(p, "w", encoding="utf-8") as f:
-            json.dump(self._collect_config(), f, indent=2, ensure_ascii=False)
+            json.dump(self._collect_full_payload(), f, indent=2, ensure_ascii=False)
+        legacy_sum = os.path.join(base_dir, "XO-" + base_name + "-summary.txt")
+        if os.path.exists(legacy_sum):
+            try: os.remove(legacy_sum)
+            except Exception: pass
 
     def _try_load_config_sidecar(self, data_path):
         try:
@@ -2191,9 +2939,10 @@ class MSAT_Redesign(ttk.Window):
             with open(p, "r", encoding="utf-8") as f:
                 cfg = json.load(f)
             self._apply_config(cfg)
-            # Tell calculate_derived_data_ui to also run the EP analysis
-            # so trendlines/peaks appear exactly as they were when saved.
-            self._auto_analyze_pending = True
+            # Apply settings only — do NOT auto-run EP analysis. The user
+            # presses Run Analysis manually; this also keeps any existing
+            # XO-…-summary.txt on disk untouched until they save again.
+            self._auto_analyze_pending = False
             self.config_label_var.set(f"✓ Config file loaded: {os.path.basename(p)}")
             print(f"[config] loaded sidecar: {os.path.basename(p)}")
             return True
@@ -2204,7 +2953,8 @@ class MSAT_Redesign(ttk.Window):
 
     def save_config_only(self):
         """Save just the config sidecar (XO-<name>-config.txt) next to the
-        loaded data file — no images. Useful when you only want the settings."""
+        loaded data file — no images. Shows a single confirmation popup
+        with overwrite warning, OK / Cancel."""
         if getattr(self, 'source_type', None) == "OFFLINE" and self.source_path:
             base_dir  = os.path.dirname(os.path.abspath(self.source_path))
             base_name = os.path.splitext(os.path.basename(self.source_path))[0]
@@ -2212,15 +2962,52 @@ class MSAT_Redesign(ttk.Window):
             messagebox.showwarning("Save Config",
                                    "No local input file loaded.\nPlease load a data file first.")
             return
+
+        fn = "XO-" + base_name + "-config.txt"
+        fp = os.path.join(base_dir, fn)
+        exists = os.path.exists(fp)
+
+        # ── Single confirmation popup ──────────────────────────────────
+        dlg = tk.Toplevel(self); dlg.title("Save Results & Config")
+        dlg.resizable(False, False); dlg.grab_set(); dlg.lift()
+        try: dlg.transient(self)
+        except Exception: pass
+
+        ttk.Label(dlg, text="The following file will be saved:",
+                  font=("Arial", 10, "bold")).pack(anchor="w", padx=16, pady=(14, 4))
+        mark = "  ⚠ already exists" if exists else ""
+        ttk.Label(dlg, text=f"  •  CONFIG + RESULTS (json):  {fn}{mark}",
+                  font=("Consolas", 9)).pack(anchor="w", padx=24, pady=1)
+        ttk.Label(dlg, text=f"Folder:  {base_dir}",
+                  font=("Arial", 8), foreground="gray").pack(anchor="w", padx=20, pady=(6, 2))
+
+        if exists:
+            ttk.Label(dlg,
+                      text="🔴⚠ Warning: this file already exists and will be OVERWRITTEN!",
+                      font=("Arial", 9, "bold"),
+                      foreground="#dc2626").pack(anchor="w", padx=16, pady=(8, 2))
+
+        btn_frame = ttk.Frame(dlg); btn_frame.pack(fill=X, padx=16, pady=(12, 14))
+        result = {"ok": False}
+        def do_ok():    result["ok"] = True;  dlg.destroy()
+        def do_cancel(): dlg.destroy()
+        ok_label = "💾 OK (Overwrite)" if exists else "💾 OK"
+        ttk.Button(btn_frame, text=ok_label, command=do_ok,
+                   bootstyle=("danger" if exists else "primary")
+                   ).pack(side=LEFT, padx=(0, 8))
+        ttk.Button(btn_frame, text="Cancel", command=do_cancel,
+                   bootstyle="secondary-outline").pack(side=LEFT)
+        self._center_dialog(dlg)
+        dlg.wait_window()
+        if not result["ok"]:
+            return
+
         try:
             self._save_config_sidecar(base_dir, base_name)
         except Exception as exc:
             messagebox.showerror("Save Config", f"Could not save config:\n{exc}")
             return
-        fn = "XO-" + base_name + "-config.txt"
         self.config_label_var.set(f"✓ Config file saved: {fn}")
-        messagebox.showinfo("Save Config",
-                            f"Config saved successfully!\n\n{fn}\n\nFolder:\n{base_dir}")
 
     def load_config_file(self):
         """Manually pick a config sidecar (XO-<name>-config.txt) and apply it
@@ -2244,14 +3031,37 @@ class MSAT_Redesign(ttk.Window):
             self._apply_config(cfg)
             self.config_label_var.set(f"✓ Config file loaded: {os.path.basename(p)}")
             print(f"[config] manually loaded: {os.path.basename(p)}")
-            # Re-run the analysis pipeline so the loaded settings take effect.
+            # Apply settings only — re-derive curves without auto-running EP
+            # analysis. User clicks "Run Analysis" when they want EPs back.
+            self._auto_analyze_pending = False
             if getattr(self, "df_raw", None) is not None:
-                self._auto_analyze_pending = True
-                self.calculate_derived_data_ui()
+                self.calculate_derived_data(analyze=False)
             else:
                 self.refresh_plots()
         except Exception as exc:
             messagebox.showerror("Load Config", f"Could not load config file:\n{exc}")
+
+    def clear_all_state(self):
+        """🧹 Clear All — wipe everything as if the app was just launched:
+        stop live monitor, unload any open .txt, drop config, clear EPs and
+        plots. Same destination state as a fresh start."""
+        if self.live_monitor_active:
+            self.stop_live_monitor()
+        self.stop_monitoring()
+        self.clear_all_data()
+        self.manual_excluded = set()
+        if hasattr(self, "_default_config"):
+            self._apply_config(self._default_config)
+        # Drop the loaded file + config + analysis state
+        self.source_type = None; self.source_path = ""
+        self.file_label_var.set("No file loaded")
+        self.file_path_var.set("No file loaded")
+        self.config_label_var.set("No config loaded")
+        self.found_eps = {}; self.global_anchors = []; self.trendlines_data = {}
+        self.analysis_done = False
+        self._auto_analyze_pending = False
+        self.df_raw = None; self.df_cal = None
+        self.refresh_plots()
 
     def start_over(self):
         """Discard the loaded config and restore all settings to the pristine
