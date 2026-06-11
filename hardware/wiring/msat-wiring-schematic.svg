@@ -144,5 +144,5 @@
   <text x="720" y="903" class="sub">⚠ GPIO2 &amp; GPIO15 are strapping pins — disconnect while flashing.</text>
 
   <!-- Footer -->
-  <text x="750" y="956" text-anchor="middle" class="foot">Hardware design © 2026 Burapha University · CC BY-NC 4.0 · Patent pending No. 2603001145 · github.com/teeranann/msat</text>
+  <text x="750" y="956" text-anchor="middle" class="foot">Hardware design © 2026 Burapha University · CERN-OHL-S v2 · Patent pending No. 2603001145 · github.com/teeranann/msat</text>
 </svg>

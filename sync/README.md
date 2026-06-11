@@ -34,4 +34,4 @@ missing/updated file directly (no temp‑rename, so it works under folder
 protection).
 
 ---
-Copyright © 2026 Burapha University · PolyForm Noncommercial 1.0.0 · Patent pending No. 2603001145
+Copyright © 2026 Burapha University · Apache-2.0 · Patent pending No. 2603001145

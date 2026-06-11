@@ -38,7 +38,10 @@ authors:
     affiliation: "Department of Mechanical Engineering, Faculty of Engineering, Rajamangala University of Technology Rattanakosin, Nakhon Pathom, Thailand"
 repository-code: "https://github.com/teeranann/msat"
 url: "https://github.com/teeranann/msat"
-license-url: "https://polyformproject.org/licenses/noncommercial/1.0.0"
+license:
+  - Apache-2.0
+  - CERN-OHL-S-2.0
+  - CC-BY-4.0
 keywords:
   - acid-base titration
   - automatic titrator
@@ -49,7 +52,9 @@ keywords:
   - analytical chemistry education
 date-released: "2026-05-21"
 notes: >-
-  Copyright (c) 2026 Burapha University. Petty Patent pending, Application
-  No. 2603001145 (filed 2026-05-12). Software: PolyForm Noncommercial 1.0.0;
-  documentation/hardware/data: CC BY-NC 4.0. A related manuscript is in
-  preparation; please also cite the paper once published.
+  Copyright (c) 2026 Burapha University. Open source: code under Apache-2.0,
+  hardware design files under CERN-OHL-S-2.0, documentation, images, and data
+  under CC-BY-4.0. Petty Patent (Application No. 2603001145, filed 2026-05-12)
+  is held by Burapha University and licensed under the patent grants of these
+  licenses. A related manuscript is in preparation; please also cite the paper
+  once published.

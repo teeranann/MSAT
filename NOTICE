@@ -1,7 +1,7 @@
 MSAT - Multi-Sensor Automatic Titrator
 ======================================
 
-Copyright (c) 2026 Burapha University. All rights reserved.
+Copyright (c) 2026 Burapha University.
 
 Inventor / developer:
   Teeranan Nongnual <teeranan.no@buu.ac.th>
@@ -23,24 +23,24 @@ Co-inventors:
 Intellectual property
 ----------------------
 Petty Patent (อนุสิทธิบัตร) PENDING - Application No. 2603001145,
-filed 2026-05-12, owned by Burapha University.
+filed 2026-05-12, held by Burapha University. The patent is licensed to
+users of this work under the patent grants of the licenses below (Apache-2.0
+section 3; CERN-OHL-S v2).
 
 Licensing
 ---------
 Software (firmware, analyzer, sync tool):
-  PolyForm Noncommercial License 1.0.0  (see LICENSE)
-Documentation, hardware design files, images, and sample data:
-  Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)
-  <https://creativecommons.org/licenses/by-nc/4.0/>
+  Apache License 2.0  (see LICENSE)
+Hardware design files (schematics, wiring diagram, BOM):
+  CERN Open Hardware Licence Version 2 - Strongly Reciprocal (CERN-OHL-S v2)
+  (see LICENSE-hardware)
+Documentation, images, and sample data:
+  Creative Commons Attribution 4.0 International (CC BY 4.0)
+  <https://creativecommons.org/licenses/by/4.0/>
 
-You MAY: use, study, modify, and share this work for noncommercial purposes
-(education, research, schools, universities), provided you keep this notice
-and attribute the source.
-
-You MAY NOT: sell this system or its code, or use it for commercial purposes,
-without written permission. The associated patent rights are reserved.
-
-Commercial licensing / permissions: contact Burapha University via
-Teeranan Nongnual <teeranan.no@buu.ac.th>.
+You MAY use, study, modify, distribute, and build upon this work, including
+for commercial purposes, under the terms of the applicable license above
+(attribution required; hardware derivatives must remain open under the
+reciprocal terms of CERN-OHL-S).
 
 When using this work in academic output, please cite it (see CITATION.cff).

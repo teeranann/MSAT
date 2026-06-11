@@ -2,12 +2,12 @@
 REM ============================================================================
 REM  MSAT Sync launcher (Windows) - menu front-end for msat-sync.sh (Git Bash).
 REM  Sync data from the MSAT device, clean up old files, or protect the output
-REM  folder. Copyright (c) 2026 Burapha University. All rights reserved.
+REM  folder. Copyright (c) 2026 Burapha University.
 REM  Inventor/developer: Teeranan Nongnual <teeranan.no@buu.ac.th>, Burapha Univ.
 REM  Petty Patent pending: Application No. 2603001145 (filed 2026-05-12).
-REM  License: PolyForm Noncommercial 1.0.0 (see \LICENSE) - noncommercial use,
-REM  modification allowed, selling prohibited.
-REM  SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+REM  License: Apache License 2.0 (see \LICENSE) - free for any use, including
+REM  commercial use, with attribution.
+REM  SPDX-License-Identifier: Apache-2.0
 REM ============================================================================
 color F0
 setlocal

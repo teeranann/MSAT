@@ -6,16 +6,16 @@
  * electrical conductivity (EC), colour (RGB -> dE), temperature and titrant
  * mass in real time, serves a WiFi dashboard, and saves runs to an SD card.
  *
- * Copyright (c) 2026 Burapha University. All rights reserved.
+ * Copyright (c) 2026 Burapha University.
  * Inventor / developer: Teeranan Nongnual <teeranan.no@buu.ac.th>
  *   Department of Chemistry, Faculty of Science, Burapha University, Thailand
  *
  * Petty Patent pending: Application No. 2603001145 (filed 2026-05-12).
  *
- * License: PolyForm Noncommercial 1.0.0  (see /LICENSE).
- *   Free for noncommercial use (education, research, schools, universities);
- *   modification allowed; selling this system or code is prohibited.
- * SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+ * License: Apache License 2.0  (see /LICENSE). Free for any use, including
+ *   commercial, with attribution. The petty patent above is licensed under
+ *   Apache-2.0 section 3.
+ * SPDX-License-Identifier: Apache-2.0
  * Required Notice: Copyright (c) 2026 Burapha University.
  *
  * SETUP: set your WiFi name/password in the two lines marked "EDIT ME" below.

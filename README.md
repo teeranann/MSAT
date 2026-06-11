@@ -11,7 +11,7 @@ from the device to a PC.
 > Copyright © 2026 **Burapha University**. Inventor/developer: **Teeranan Nongnual**.
 > Co-inventors: **Nuttawisit Yasarawan, Pichamon Jittaviriyapong, Kanoksak Saelee, Akapong Suwattanamala, Supranee Kaewpirom, Takat Benjalersyarnon**.
 > **Petty Patent pending — Application No. 2603001145** (filed 2026‑05‑12).
-> Noncommercial use only — see [License](#license).
+> Open source: Apache‑2.0 (code), CERN‑OHL‑S v2 (hardware), CC BY 4.0 (docs) — see [License](#license).
 
 ---
 
@@ -59,16 +59,17 @@ autotitrators, suitable for teaching and research labs.
 
 ## License
 
-This is **noncommercial open hardware/software** (not OSI "open source" — commercial use is reserved):
+This project is **open source / open hardware**:
 
-- **Software** (firmware, analyzer, sync): **PolyForm Noncommercial 1.0.0** — see [`LICENSE`](LICENSE)
-- **Documentation, hardware files, images, sample data:** **CC BY‑NC 4.0**
+- **Software** (firmware, analyzer, sync): **Apache License 2.0** — see [`LICENSE`](LICENSE)
+- **Hardware** design files (schematic, wiring, BOM): **CERN‑OHL‑S v2** — see [`LICENSE-hardware`](LICENSE-hardware)
+- **Documentation, images, sample data:** **CC BY 4.0**
 
-You may **use, study, modify, and share** for **noncommercial** purposes
-(education, research, schools, universities) **with attribution**. **Selling the
-system or code, or any commercial use, is prohibited** without written
-permission; patent rights are reserved by Burapha University. See [`NOTICE`](NOTICE).
-For commercial licensing, contact Teeranan Nongnual <teeranan.no@buu.ac.th>.
+You may **use, study, modify, distribute, and build upon** this work, **including for
+commercial purposes**, under the terms of the applicable license (attribution required;
+hardware derivatives must stay open under CERN‑OHL‑S). The petty patent
+(Application No. 2603001145, Burapha University) is licensed under the patent grants of
+these licenses. See [`NOTICE`](NOTICE).
 
 ## Citation
 

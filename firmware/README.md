@@ -51,4 +51,4 @@ pH (2‑point), EC (KCl standards), and load cell are calibrated via the
 device/analyzer; see [`../hardware/`](../hardware/).
 
 ---
-Copyright © 2026 Burapha University · PolyForm Noncommercial 1.0.0 · Patent pending No. 2603001145
+Copyright © 2026 Burapha University · Apache-2.0 · Patent pending No. 2603001145

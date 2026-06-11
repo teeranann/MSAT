@@ -138,4 +138,4 @@ wireviz msat-wiring.yml                         # produces .html/.svg/.png/.bom.
 ```
 
 ---
-Hardware design © 2026 Burapha University · CC BY-NC 4.0 · Patent pending No. 2603001145
+Hardware design © 2026 Burapha University · CERN-OHL-S v2 · Patent pending No. 2603001145

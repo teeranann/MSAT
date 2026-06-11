@@ -4,14 +4,14 @@
 # device (ESP32) to a PC over WiFi, with an optional "clean up space" mode
 # that deletes old files on the device SD card. Invoked by msat-sync.bat.
 #
-# Copyright (c) 2026 Burapha University. All rights reserved.
+# Copyright (c) 2026 Burapha University.
 # Inventor / developer: Teeranan Nongnual <teeranan.no@buu.ac.th>
 #   Department of Chemistry, Faculty of Science, Burapha University, Thailand
 # Petty Patent pending: Application No. 2603001145 (filed 2026-05-12).
 #
-# License: PolyForm Noncommercial 1.0.0 (see /LICENSE) - noncommercial use,
-# modification allowed, selling prohibited.
-# SPDX-License-Identifier: LicenseRef-PolyForm-Noncommercial-1.0.0
+# License: Apache License 2.0 (see /LICENSE) - free for any use, including
+# commercial use, with attribution.
+# SPDX-License-Identifier: Apache-2.0
 # Required Notice: Copyright (c) 2026 Burapha University.
 #
 # Notes: HTTP keep-alive, retry with backoff, WiFi monitoring, live SD listing.
