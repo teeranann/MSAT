@@ -40,14 +40,19 @@ Edit the lines marked `EDIT ME` near the top of
 ```cpp
 const char* ssid     = "YOUR_WIFI_SSID";       // 2.4 GHz network
 const char* password = "YOUR_WIFI_PASSWORD";
-#define ADMIN_PASSWORD "CHANGE_ME"
+#define ADMIN_PASSWORD "CHANGE_ME_BEFORE_USE"
 ```
 The device uses a **static IP `192.168.1.200`** (gateway `192.168.1.1`) — change
 `local_IP`/`gateway` if your network differs. After boot, open
 `http://192.168.1.200/` for the dashboard.
 
+
+> **Before you flash.** `ssid`, `password` and `ADMIN_PASSWORD` ship as placeholders and must be
+> set to your own values. Do not commit real credentials: keep your edited copy local, or move the
+> three values into a `secrets.h` that is listed in `.gitignore`.
+
 ## Sensor calibration
-pH (2‑point), EC (KCl standards), and load cell are calibrated via the
+pH (3‑point: 4.01 / 6.86 / 9.18 buffers), EC (KCl standards), and load cell are calibrated via the
 device/analyzer; see [`../hardware/`](../hardware/).
 
 ---

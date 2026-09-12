@@ -276,7 +276,7 @@ volatile bool manifestRebuildInProgress = false;
 // ================= CLIENT CONNECTION TRACKING =================
 #define MAX_CLIENTS 2
 #define CLIENT_TIMEOUT_SEC 300  
-#define ADMIN_PASSWORD "CHANGE_ME"   // <-- EDIT ME (admin action password)
+#define ADMIN_PASSWORD "CHANGE_ME_BEFORE_USE"   // <-- EDIT ME (admin action password)
 
 struct ClientInfo {
   String ipAddress;

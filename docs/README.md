@@ -10,4 +10,4 @@ Suggested images to add before publishing:
 - `images/curve-example.png` — pH/EC/ΔE/T 4‑panel result
 
 ---
-© 2026 Burapha University · CC BY‑NC 4.0
+© 2026 Burapha University · CC BY 4.0
