@@ -1,22 +1,27 @@
 Id	Description	Qty	Unit	Designators
-1	Cable, 2 wires	0	m	W_BTN1, W_BTN2, W_BTN3, W_PSU, W_PUMP
-2	Cable, 2 wires shielded	0	m	W_RS485_BUS
-3	Cable, 3 wires	0	m	W_RELAY, W_TEMP
-4	Cable, 4 wires	0	m	I2C_ADS, I2C_GY33, I2C_LCD, I2C_RTC, W_HX
-5	Cable, 6 wires	0	m	W_RS485_MCU, W_SD
-6	Connector, ADS1115 — pH ADC, I²C 0x48, 8 pins, blue	1		ADS1115
-7	Connector, DS18B20 — temperature probe, 1-Wire, 3 pins, green	1		DS18B20
-8	Connector, DS3231 RTC, I²C 0x68, 6 pins, blue	1		DS3231
-9	Connector, EC meter (Modbus RTU), slave id 1, holding reg 0x0000, 2 pins, orange	1		ECMETER
-10	Connector, ESP32-WROOM-32 (38-pin), MCU, 19 pins, white	1		ESP32
-11	Connector, GY-33 / TCS34725 — colour, I²C 0x29, 6 pins, blue	1		GY33
-12	Connector, HX711 — load-cell amplifier, load cell, 8 pins, yellow	1		HX711
-13	Connector, LCD 16×2 + PCF8574 backpack, I²C 0x27, 4 pins, blue	1		LCD1602
-14	Connector, LM2596 buck converter, input → 5V rail, 4 pins, black	1		PSU
-15	Connector, MAX485 — RS-485 transceiver, Serial2 9600 8N1, 8 pins, orange	1		MAX485
-16	Connector, Push button 1, 2 pins, grey	1		BTN1
-17	Connector, Push button 2, 2 pins, grey	1		BTN2
-18	Connector, Push button 3 (⚠ strapping), 2 pins, grey	1		BTN3
-19	Connector, Relay 1-ch 5V (active-high), pump dosing, 6 pins, red	1		RELAY
-20	Connector, Titrant pump, 2 pins, red	1		PUMP
-21	Connector, microSD card module, SPI (VSPI), 6 pins, violet	1		SDCARD
+1	Cable, 1 wires	0	m	W_PUMP_SUPPLY
+2	Cable, 2 wires	0	m	I2C_HV_PWR, P_5V, P_BUCK1, P_BUCK2, P_EC, W_BTN1, W_BTN2, W_BTN3, W_PUMP
+3	Cable, 2 wires shielded	0	m	W_RS485_BUS
+4	Cable, 3 wires	0	m	A_PH, W_RELAY, W_TEMP
+5	Cable, 4 wires	0	m	I2C_ADS, I2C_GY33, I2C_LCD, I2C_LV, I2C_RTC, W_HX
+6	Cable, 6 wires	0	m	W_RS485_MCU, W_SD
+7	Connector, 12 V / 5 A (60 W) switching supply, main supply, 2 pins, black	1		PSU12V
+8	Connector, ADS1115 — pH ADC, I²C 0x48 (via level converter), 8 pins, blue	1		ADS1115
+9	Connector, DS18B20 — temperature probe, 1-Wire, 3 pins, green	1		DS18B20
+10	Connector, DS3231 RTC, I²C 0x68, 6 pins, blue	1		DS3231
+11	Connector, E-201-C pH electrode + analog interface board, analog out, 3 pins, blue	1		PHBOARD
+12	Connector, ESP32-WROOM-32 (38-pin), MCU, 19 pins, white	1		ESP32
+13	Connector, HX711 — load-cell amplifier, load cell, 8 pins, yellow	1		HX711
+14	Connector, LCD 16×2 + PCF8574 backpack, I²C 0x27, 5 V, 4 pins, blue	1		LCD1602
+15	Connector, LLC-4CH-I2C level converter, bidirectional 3.3 V ↔ 5 V, 8 pins, blue	1		LLC
+16	Connector, LM2596, 12 V → 5 V bus (lock at 5 V), 4 pins, black	1		BUCK1
+17	Connector, LM2596, 12 V → pump supply (~7.5 V), 4 pins, black	1		BUCK2
+18	Connector, MAX485 — RS-485 transceiver, Serial2 9600 8N1, 8 pins, orange	1		MAX485
+19	Connector, MI-Water-EC485 EC transmitter (Modbus RTU), slave id 1, holding reg 0x0000, 4 pins, orange	1		ECMETER
+20	Connector, Peristaltic pump 12 V / 3 W DC, run at ~7.5 V, 2 pins, red	1		PUMP
+21	Connector, Push button 1 (titration), 2 pins, grey	1		BTN1
+22	Connector, Push button 2 (rinse), 2 pins, grey	1		BTN2
+23	Connector, Push button 3 (record, strapping pin), 2 pins, grey	1		BTN3
+24	Connector, Relay 1-ch 5V (active-high), pump dosing, 6 pins, red	1		RELAY
+25	Connector, TCS34725 — colour, I²C 0x29, 6 pins, blue	1		GY33
+26	Connector, microSD card module, SPI (VSPI), 6 pins, violet	1		SDCARD

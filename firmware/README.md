@@ -22,7 +22,7 @@ run to the SD card.
 ## Pin map
 | Function | Pin | Notes |
 |---|---|---|
-| I²C SDA / SCL | 32 / 33 | ADS1115 (pH 0x48), TCS34725 (0x29), RTC (0x68), LCD (0x27) |
+| I²C SDA / SCL | 32 / 33 | ADS1115 (pH 0x48, 5 V, through a 3.3 V ↔ 5 V level converter), TCS34725 (0x29), RTC (0x68), LCD (0x27) |
 | RS‑485 DE/RE, RX, TX | 2, 16, 17 | EC meter (Modbus) — **GPIO2 is a strapping pin** |
 | Load cell DOUT / SCK | 25 / 26 | HX711 |
 | DS18B20 (1‑Wire) | 4 | temperature |

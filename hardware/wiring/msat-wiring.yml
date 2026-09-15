@@ -1,18 +1,22 @@
 # MSAT — Multi-Sensor Automatic Titrator
-# Wiring source-of-truth for WireViz.
-# Derived directly from msat-firmware/msat-firmware.ino — every pin
-# matches a #define in the firmware. Render with:
+# Wiring source-of-truth for WireViz, as built.
+# GPIO numbers match the #defines in msat-firmware/msat-firmware.ino; supply
+# rails and the I²C level converter are taken from the built unit and agree
+# with Supplementary Table S2 of the paper. Render with:
 #   wireviz msat-wiring.yml
 #
 # ⚠ GPIO2 and GPIO15 are ESP32 strapping pins. Disconnect during flashing.
+# ⚠ The LCD runs at 5 V and is wired straight to GPIO32/33 (as built). For a new
+#   build, put it on the HV side of the level converter or remove its pull-ups.
 
 metadata:
-  title: MSAT — ESP32-WROOM-32 wiring (firmware-exact)
+  title: MSAT — ESP32-WROOM-32 wiring (as built)
   description: >
-    Multi-Sensor Automatic Titrator. ESP32 talks to four I²C devices
-    (ADS1115/pH, GY-33/colour, DS3231 RTC, LCD 16×2), one 1-Wire DS18B20,
-    HX711 load cell, MAX485 → Modbus EC meter, microSD on VSPI, a pump
-    relay, and three push buttons.
+    Multi-Sensor Automatic Titrator. 12 V supply with two LM2596 bucks (5 V bus
+    and pump supply). ESP32 talks to four I²C devices: ADS1115/pH at 5 V through
+    an LLC-4CH-I2C level converter, TCS34725/colour and DS3231 RTC at 3.3 V, and
+    a 16×2 LCD at 5 V. One 1-Wire DS18B20, HX711 load cell, MAX485 → Modbus EC
+    transmitter, microSD on VSPI, a pump relay, and three push buttons.
 
 options:
   color_mode: full
@@ -24,11 +28,29 @@ options:
 # ============================================================
 connectors:
 
+  PSU12V:
+    type: 12 V / 5 A (60 W) switching supply
+    subtype: main supply
+    color: BK
+    pinlabels: ["V+ 12V", "V- GND"]
+
+  BUCK1:
+    type: LM2596 #1
+    subtype: 12 V → 5 V bus (lock at 5 V)
+    color: BK
+    pinlabels: ["IN+", "IN-", "OUT+ 5V", "OUT- GND"]
+
+  BUCK2:
+    type: LM2596 #2
+    subtype: 12 V → pump supply (~7.5 V)
+    color: BK
+    pinlabels: ["IN+", "IN-", "OUT+ PUMP", "OUT- GND"]
+
   ESP32:
     type: ESP32-WROOM-32 (38-pin)
     subtype: MCU
     color: WH
-    pinlabels: [3V3, GND, 5V, GPIO32 SDA, GPIO33 SCL,
+    pinlabels: [3V3, GND, VIN 5V, GPIO32 SDA, GPIO33 SCL,
                 GPIO2 DE/RE, GPIO16 RX, GPIO17 TX,
                 GPIO4 1-Wire,
                 GPIO25 HX-DT, GPIO26 HX-SCK,
@@ -36,17 +58,29 @@ connectors:
                 GPIO13 RELAY,
                 GPIO27 BTN1, GPIO14 BTN2, GPIO15 BTN3]
 
+  LLC:
+    type: LLC-4CH-I2C level converter
+    subtype: bidirectional 3.3 V ↔ 5 V
+    color: BU
+    pinlabels: [LV 3V3, LV GND, LV1 SCL, LV2 SDA, HV 5V, HV GND, HV1 SCL, HV2 SDA]
+
   ADS1115:
     type: ADS1115 — pH ADC
-    subtype: I²C 0x48
+    subtype: I²C 0x48 (via level converter)
     color: BU
-    pinlabels: [VDD 3V3, GND, SCL, SDA, AIN0 (pH BNC), AIN1, AIN2, AIN3]
+    pinlabels: [VDD 5V, GND, SCL, SDA, AIN0 (pH PO), AIN1, AIN2, AIN3]
+
+  PHBOARD:
+    type: E-201-C pH electrode + analog interface board
+    subtype: analog out
+    color: BU
+    pinlabels: [VCC 5V, GND, PO]
 
   GY33:
-    type: GY-33 / TCS34725 — colour
+    type: TCS34725 — colour
     subtype: I²C 0x29
     color: BU
-    pinlabels: [VCC 3V3, GND, SCL, SDA, INT, LED]
+    pinlabels: [VIN 3V3, GND, SCL, SDA, INT, LED]
 
   DS3231:
     type: DS3231 RTC
@@ -56,7 +90,7 @@ connectors:
 
   LCD1602:
     type: LCD 16×2 + PCF8574 backpack
-    subtype: I²C 0x27
+    subtype: I²C 0x27, 5 V
     color: BU
     pinlabels: [VCC 5V, GND, SCL, SDA]
 
@@ -80,10 +114,10 @@ connectors:
     pinlabels: [VCC 5V, GND, RO, RE, DE, DI, A, B]
 
   ECMETER:
-    type: EC meter (Modbus RTU)
+    type: MI-Water-EC485 EC transmitter (Modbus RTU)
     subtype: slave id 1, holding reg 0x0000
     color: OG
-    pinlabels: [A, B]
+    pinlabels: ["V+ 12V (red)", "GND (black)", "A (yellow)", "B (blue)"]
 
   SDCARD:
     type: microSD card module
@@ -98,60 +132,84 @@ connectors:
     pinlabels: [VCC 5V, GND, IN, COM, "NO", "NC"]
 
   PUMP:
-    type: Titrant pump
+    type: Peristaltic pump 12 V / 3 W DC
+    subtype: run at ~7.5 V
     color: RD
-    pinlabels: ["L (hot)", "N (neutral)"]
+    pinlabels: ["Red (+)", "Black (-)"]
 
   BTN1:
-    type: Push button 1
+    type: Push button 1 (titration)
     color: GY
     pinlabels: [GPIO27, GND]
 
   BTN2:
-    type: Push button 2
+    type: Push button 2 (rinse)
     color: GY
     pinlabels: [GPIO14, GND]
 
   BTN3:
-    type: Push button 3 (⚠ strapping)
+    type: Push button 3 (record, strapping pin)
     color: GY
     pinlabels: [GPIO15, GND]
-
-  PSU:
-    type: LM2596 buck converter
-    subtype: input → 5V rail
-    color: BK
-    pinlabels: ["VIN+", "VIN-", "5V OUT+", "5V OUT-"]
 
 # ============================================================
 # CABLES (named per bus, colour-coded)
 # ============================================================
 cables:
 
-  # ---------- I²C bus (shared by 4 devices) ----------
+  # ---------- Power ----------
+  P_BUCK1:
+    wirecount: 2
+    colors: [RD, BK]
+    notes: "12 V to LM2596 #1"
+  P_BUCK2:
+    wirecount: 2
+    colors: [RD, BK]
+    notes: "12 V to LM2596 #2"
+  P_EC:
+    wirecount: 2
+    colors: [RD, BK]
+    notes: "12 V to EC transmitter"
+  P_5V:
+    wirecount: 2
+    colors: [RD, BK]
+    notes: "5 V bus to ESP32 VIN"
+
+  # ---------- I²C ----------
+  I2C_LV:
+    wirecount: 4
+    colors: [RD, BK, BU, YE]
+    notes: "ESP32 3V3/GND/SCL/SDA to converter LV side"
+  I2C_HV_PWR:
+    wirecount: 2
+    colors: [RD, BK]
+    notes: "5 V bus to converter HV side"
   I2C_ADS:
     color_code: DIN
     wirecount: 4
     colors: [RD, BK, BU, YE]
-    notes: "I²C — VCC/GND/SCL/SDA"
-
+    notes: "5 V/GND from bus; SCL/SDA from converter HV1/HV2"
   I2C_GY33:
     color_code: DIN
     wirecount: 4
     colors: [RD, BK, BU, YE]
-    notes: "I²C — VCC/GND/SCL/SDA"
-
+    notes: "I²C — 3V3/GND/SCL/SDA"
   I2C_RTC:
     color_code: DIN
     wirecount: 4
     colors: [RD, BK, BU, YE]
-    notes: "I²C — VCC/GND/SCL/SDA"
-
+    notes: "I²C — 3V3/GND/SCL/SDA"
   I2C_LCD:
     color_code: DIN
     wirecount: 4
     colors: [RD, BK, BU, YE]
-    notes: "I²C — VCC(5V)/GND/SCL/SDA"
+    notes: "I²C — 5V/GND/SCL/SDA, direct to GPIO32/33 (see header note)"
+
+  # ---------- pH analog ----------
+  A_PH:
+    wirecount: 3
+    colors: [RD, BK, WH]
+    notes: "pH board 5V/GND/PO → ADS1115 AIN0"
 
   # ---------- 1-Wire ----------
   W_TEMP:
@@ -170,10 +228,9 @@ cables:
     wirecount: 6
     colors: [RD, BK, OG, GN, BU, YE]
     notes: "MAX485 — VCC/GND/RO·RE·DE·DI"
-
   W_RS485_BUS:
     wirecount: 2
-    colors: [OG, BU]
+    colors: [YE, BU]
     shield: true
     notes: "RS-485 differential pair A/B"
 
@@ -188,11 +245,14 @@ cables:
     wirecount: 3
     colors: [RD, BK, OG]
     notes: "Relay control — VCC/GND/IN"
-
+  W_PUMP_SUPPLY:
+    wirecount: 1
+    colors: [RD]
+    notes: "LM2596 #2 OUT+ to relay COM"
   W_PUMP:
     wirecount: 2
     colors: [RD, BK]
-    notes: "Pump mains loop via relay COM/NO"
+    notes: "Relay NO to pump red; pump black to GND"
 
   # ---------- Buttons ----------
   W_BTN1:
@@ -206,38 +266,64 @@ cables:
     wirecount: 2
     colors: [GY, BK]
 
-  # ---------- Power ----------
-  W_PSU:
-    wirecount: 2
-    colors: [RD, BK]
-    notes: "5V rail to ESP32 VIN"
-
 # ============================================================
 # CONNECTIONS (the actual wiring)
 # ============================================================
 connections:
 
-  # ---- I²C: ADS1115 (pH ADC) ----
+  # ---- Power ----
+  -
+    - PSU12V: ["V+ 12V", "V- GND"]
+    - P_BUCK1: [1, 2]
+    - BUCK1: ["IN+", "IN-"]
+  -
+    - PSU12V: ["V+ 12V", "V- GND"]
+    - P_BUCK2: [1, 2]
+    - BUCK2: ["IN+", "IN-"]
+  -
+    - PSU12V: ["V+ 12V", "V- GND"]
+    - P_EC: [1, 2]
+    - ECMETER: ["V+ 12V (red)", "GND (black)"]
+  -
+    - BUCK1: ["OUT+ 5V", "OUT- GND"]
+    - P_5V: [1, 2]
+    - ESP32: [VIN 5V, GND]
+
+  # ---- I²C: ESP32 → level converter → ADS1115 ----
   -
     - ESP32: [3V3, GND, GPIO33 SCL, GPIO32 SDA]
+    - I2C_LV: [1, 2, 3, 4]
+    - LLC: [LV 3V3, LV GND, LV1 SCL, LV2 SDA]
+  -
+    - BUCK1: ["OUT+ 5V", "OUT- GND"]
+    - I2C_HV_PWR: [1, 2]
+    - LLC: [HV 5V, HV GND]
+  -
+    - LLC: [HV 5V, HV GND, HV1 SCL, HV2 SDA]
     - I2C_ADS: [1, 2, 3, 4]
-    - ADS1115: [VDD 3V3, GND, SCL, SDA]
+    - ADS1115: [VDD 5V, GND, SCL, SDA]
 
-  # ---- I²C: GY-33 (colour) ----
+  # ---- pH board → ADS1115 AIN0 ----
+  -
+    - PHBOARD: [VCC 5V, GND, PO]
+    - A_PH: [1, 2, 3]
+    - ADS1115: [VDD 5V, GND, AIN0 (pH PO)]
+
+  # ---- I²C: TCS34725 (colour), 3.3 V, direct ----
   -
     - ESP32: [3V3, GND, GPIO33 SCL, GPIO32 SDA]
     - I2C_GY33: [1, 2, 3, 4]
-    - GY33: [VCC 3V3, GND, SCL, SDA]
+    - GY33: [VIN 3V3, GND, SCL, SDA]
 
-  # ---- I²C: DS3231 (RTC) ----
+  # ---- I²C: DS3231 (RTC), 3.3 V, direct ----
   -
     - ESP32: [3V3, GND, GPIO33 SCL, GPIO32 SDA]
     - I2C_RTC: [1, 2, 3, 4]
     - DS3231: [VCC 3V3, GND, SCL, SDA]
 
-  # ---- I²C: LCD 16x2 ----
+  # ---- I²C: LCD 16x2, 5 V, direct to GPIO32/33 ----
   -
-    - ESP32: [5V, GND, GPIO33 SCL, GPIO32 SDA]
+    - ESP32: [VIN 5V, GND, GPIO33 SCL, GPIO32 SDA]
     - I2C_LCD: [1, 2, 3, 4]
     - LCD1602: [VCC 5V, GND, SCL, SDA]
 
@@ -249,39 +335,43 @@ connections:
 
   # ---- HX711 + load cell ----
   -
-    - ESP32: [5V, GND, GPIO25 HX-DT, GPIO26 HX-SCK]
+    - ESP32: [VIN 5V, GND, GPIO25 HX-DT, GPIO26 HX-SCK]
     - W_HX: [1, 2, 3, 4]
     - HX711: [VCC 5V, GND, DT, SCK]
 
   # ---- RS-485 transceiver ----
   -
-    - ESP32: [5V, GND, GPIO16 RX, GPIO2 DE/RE, GPIO2 DE/RE, GPIO17 TX]
+    - ESP32: [VIN 5V, GND, GPIO16 RX, GPIO2 DE/RE, GPIO2 DE/RE, GPIO17 TX]
     - W_RS485_MCU: [1, 2, 3, 4, 5, 6]
     - MAX485: [VCC 5V, GND, RO, RE, DE, DI]
 
-  # ---- RS-485 to EC meter ----
+  # ---- RS-485 to EC transmitter ----
   -
     - MAX485: [A, B]
     - W_RS485_BUS: [1, 2]
-    - ECMETER: [A, B]
+    - ECMETER: ["A (yellow)", "B (blue)"]
 
   # ---- microSD on VSPI ----
   -
-    - ESP32: [5V, GND, GPIO5 SD-CS, GPIO18 SD-SCK, GPIO19 SD-MISO, GPIO23 SD-MOSI]
+    - ESP32: [VIN 5V, GND, GPIO5 SD-CS, GPIO18 SD-SCK, GPIO19 SD-MISO, GPIO23 SD-MOSI]
     - W_SD: [1, 2, 3, 4, 5, 6]
     - SDCARD: [VCC 5V, GND, CS, SCK, MISO, MOSI]
 
   # ---- Relay control ----
   -
-    - ESP32: [5V, GND, GPIO13 RELAY]
+    - ESP32: [VIN 5V, GND, GPIO13 RELAY]
     - W_RELAY: [1, 2, 3]
     - RELAY: [VCC 5V, GND, IN]
 
-  # ---- Pump (load side of relay) ----
+  # ---- Pump supply through the relay ----
   -
-    - RELAY: [COM, "NO"]
+    - BUCK2: ["OUT+ PUMP"]
+    - W_PUMP_SUPPLY: [1]
+    - RELAY: [COM]
+  -
+    - RELAY: ["NO", GND]
     - W_PUMP: [1, 2]
-    - PUMP: ["L (hot)", "N (neutral)"]
+    - PUMP: ["Red (+)", "Black (-)"]
 
   # ---- Buttons (each to GND, ESP32 internal pull-up) ----
   -
@@ -296,9 +386,3 @@ connections:
     - ESP32: [GPIO15 BTN3, GND]
     - W_BTN3: [1, 2]
     - BTN3: [GPIO15, GND]
-
-  # ---- Power: LM2596 → ESP32 ----
-  -
-    - PSU: ["5V OUT+", "5V OUT-"]
-    - W_PSU: [1, 2]
-    - ESP32: [5V, GND]
